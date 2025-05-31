@@ -1,5 +1,3 @@
-# wiz-technical-exercise
-
 ## Overview
 
 This project sets up a containerized web application running on an AWS EKS cluster and an instance running MongoDB, which performs backups to an S3 bucket.
