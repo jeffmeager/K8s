@@ -1,4 +1,12 @@
-
+terraform {
+  backend "s3" {
+    bucket         = "jeffmeager-challenge-terraform-state-bucket"
+    key            = "wiz-challenge/terraform.tfstate"
+    region         = "ap-southeast-2"
+    profile        = "devops-admin"
+    encrypt        = true
+  }
+}
 
 # VPC
 resource "aws_vpc" "main" {
