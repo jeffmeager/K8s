@@ -32,3 +32,10 @@ override.tf.json
 # Ignore CLI configuration files
 .terraformrc
 terraform.rc
+
+# misc
+.coverage
+.vscode
+coverage.xml
+enforce_branch_protection.sh
+.DS_Store

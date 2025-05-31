@@ -1,7 +1,4 @@
-provider "aws" {
-  region  = "us-east-1"
-  profile = "devops-lead"
-}
+
 
 # VPC
 resource "aws_vpc" "main" {
@@ -12,12 +9,14 @@ resource "aws_vpc" "main" {
 resource "aws_subnet" "public" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = "10.0.1.0/24"
+  availability_zone = "ap-southeast-2a"
   map_public_ip_on_launch = true
 }
 
 resource "aws_subnet" "private" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = "10.0.2.0/24"
+  availability_zone = "ap-southeast-2b"
 }
 
 # Internet Gateway
@@ -55,7 +54,7 @@ resource "aws_security_group" "eks_cluster_sg" {
 
 # EKS Cluster
 resource "aws_eks_cluster" "eks" {
-  name     = "example-eks-cluster"
+  name     = "challenge-eks-cluster"
   role_arn = aws_iam_role.eks.arn
 
   vpc_config {
@@ -135,7 +134,7 @@ resource "aws_iam_role_policy_attachment" "eks_node_AmazonEKS_CNI_Policy" {
 
 # EC2 Instance for MongoDB
 resource "aws_instance" "mongodb_instance" {
-  ami           = "ami-0c55b159cbfafe1f0" # Outdated Linux AMI
+  ami           = "ami-06a0b33485e9d1cf1"
   instance_type = "t2.micro"
   subnet_id     = aws_subnet.public.id
   user_data     = <<-EOF
@@ -150,6 +149,5 @@ resource "aws_instance" "mongodb_instance" {
 
 # S3 Bucket for MongoDB Backups
 resource "aws_s3_bucket" "backup_bucket" {
-  bucket = "wiztech-docker-tfstate"
-  acl    = "public-read"
+  bucket = "challenge-docker-backups"
 }
