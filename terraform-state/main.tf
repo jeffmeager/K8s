@@ -3,13 +3,12 @@ provider "aws" {
   profile = "devops-admin"
 }
 
-# Try to load the bucket data — this will fail if it doesn't exist,
-# but we will handle that gracefully with `can()`
+# Try to retrieve the bucket if it already exists
 data "aws_s3_bucket" "existing" {
   bucket = "jeffmeager-challenge-terraform-state-bucket"
 }
 
-# Only create the bucket if it doesn't already exist (can() handles lookup failure)
+# Only create the bucket if it doesn't already exist
 resource "aws_s3_bucket" "terraform_state" {
   count  = can(data.aws_s3_bucket.existing.id) ? 0 : 1
   bucket = "jeffmeager-challenge-terraform-state-bucket"
@@ -19,9 +18,9 @@ resource "aws_s3_bucket" "terraform_state" {
   }
 }
 
-# Only configure versioning if the bucket is newly created
+# Only configure versioning if the bucket is being created
 resource "aws_s3_bucket_versioning" "versioning" {
-  count  = aws_s3_bucket.terraform_state.count
+  count  = length(aws_s3_bucket.terraform_state)
   bucket = aws_s3_bucket.terraform_state[0].id
 
   versioning_configuration {
@@ -29,9 +28,9 @@ resource "aws_s3_bucket_versioning" "versioning" {
   }
 }
 
-# Only apply encryption config if the bucket is newly created
+# Only apply encryption if the bucket is being created
 resource "aws_s3_bucket_server_side_encryption_configuration" "encryption" {
-  count  = aws_s3_bucket.terraform_state.count
+  count  = length(aws_s3_bucket.terraform_state)
   bucket = aws_s3_bucket.terraform_state[0].bucket
 
   rule {
