@@ -40,7 +40,7 @@ resource "aws_db_instance" "wordpress_db" {
   engine_version          = "10.6"
   instance_class          = "db.t3.micro"
   identifier              = "wordpress-mariadb"
-  name                    = "wordpress"
+  db_name                    = "wordpress"
   username                = var.db_username
   password                = var.db_password
   port                    = 3306
