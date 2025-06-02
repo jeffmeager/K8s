@@ -1,20 +1,28 @@
 pipeline {
     agent any
-    
+
     environment {
         PATH                = "/opt/homebrew/bin:/usr/local/bin:${env.PATH}"
         AWS_PROFILE         = 'devops-admin'
         AWS_DEFAULT_REGION  = 'ap-southeast-2'
     }
-    
+
     stages {
         stage('Create State Bucket') {
             steps {
                 dir('terraform-state') {
-                    sh '''
-                    terraform init
-                    terraform apply -auto-approve
-                    '''
+                    script {
+                        def output = sh(script: "terraform init && terraform apply -auto-approve", returnStatus: true)
+                        if (output != 0) {
+                            def log = sh(script: "terraform apply -auto-approve", returnStdout: true, returnStatus: true)
+                            if (log.contains("BucketAlreadyOwnedByYou")) {
+                                echo "⚠️ Bucket already exists and is owned by you. Skipping creation."
+                                currentBuild.result = 'SUCCESS'
+                            } else {
+                                error("Terraform failed:\n${log}")
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -22,11 +30,10 @@ pipeline {
 
     post {
         success {
-            echo '🚀 Terraform S3 state bucket created successfully'
+            echo '🚀 Terraform S3 state bucket verified or created successfully'
         }
         failure {
             echo '⚠️ Terraform S3 state bucket deployment encountered issues'
         }
     }
-    
 }
