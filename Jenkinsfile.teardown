@@ -20,37 +20,28 @@ pipeline {
     }
 
     stages {
-        stage('Configure kubectl') {
+        stage('Configure kubectl and delete helm and app') {
             steps {
                 sh '''
                     echo "🔍 Checking if EKS cluster '${EKS_CLUSTER_NAME}' exists..."
                     if aws eks describe-cluster --name ${EKS_CLUSTER_NAME} --region ${AWS_DEFAULT_REGION} --profile ${AWS_PROFILE} >/dev/null 2>&1; then
-                    echo "✅ Cluster found. Updating kubeconfig..."
-                    aws eks update-kubeconfig \
-                        --name ${EKS_CLUSTER_NAME} \
-                        --region ${AWS_DEFAULT_REGION} \
-                        --profile ${AWS_PROFILE}
+                        echo "✅ Cluster found. Updating kubeconfig..."
+                        aws eks update-kubeconfig \
+                            --name ${EKS_CLUSTER_NAME} \
+                            --region ${AWS_DEFAULT_REGION} \
+                            --profile ${AWS_PROFILE}
+
+                        kubectl delete -f kubernetes/services/webapp-service.yaml || true
+                        kubectl delete -f kubernetes/deployments/webapp-deployment.yaml || true
+
+                        // Helm chart cleanup
+                        echo "🧹 Uninstalling Helm charts..."
+                        helm uninstall csi-secrets-store -n kube-system || true
+                        helm uninstall secrets-store-csi-driver-provider-aws -n kube-system || true
+
                     else
-                    echo "⚠️ Cluster '${EKS_CLUSTER_NAME}' not found. Skipping kubeconfig update."
+                        echo "⚠️ Cluster '${EKS_CLUSTER_NAME}' not found. Skipping kubeconfig update."
                     fi
-                '''
-            }
-        }
-
-        stage('Delete WebApp and CSI Helm Charts') {
-            steps {
-                dir('kubernetes/services') {
-                    sh 'kubectl delete -f webapp-service.yaml || true'
-                }
-                dir('kubernetes/deployments') {
-                    sh 'kubectl delete -f webapp-deployment.yaml || true'
-                }
-
-                // Helm chart cleanup
-                sh '''
-                    echo "🧹 Uninstalling Helm charts..."
-                    helm uninstall csi-secrets-store -n kube-system || true
-                    helm uninstall secrets-store-csi-driver-provider-aws -n kube-system || true
                 '''
             }
         }
