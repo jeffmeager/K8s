@@ -20,18 +20,6 @@ pipeline {
     }
 
     stages {
-        stage('Force delete secrets') {
-            steps {
-                sh '''
-                    aws secretsmanager delete-secret \
-                        --secret-id wordpress-db-password \
-                        --force-delete-without-recovery \
-                        --region ap-southeast-2 \
-                        --profile devops-admin
-                '''
-            }
-        }
-
         stage('Configure kubectl') {
             steps {
                 sh '''
@@ -83,6 +71,18 @@ pipeline {
                         }
                 }
             }       
+        }
+        // Force delete the secret so it can be reused
+        stage('Force delete secrets') {
+                steps {
+                    sh '''
+                        aws secretsmanager delete-secret \
+                            --secret-id wordpress-db-password \
+                            --force-delete-without-recovery \
+                            --region ap-southeast-2 \
+                            --profile devops-admin
+                    '''
+                }
         }
     }
 
