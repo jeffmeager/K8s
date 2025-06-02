@@ -26,39 +26,38 @@ pipeline {
             }
         }
 
- stage('Terraform Init') {
-      steps {
-        withCredentials([
-          string(credentialsId: 'rds-db-username', variable: 'TF_DB_USERNAME'),
-          string(credentialsId: 'rds-db-password', variable: 'TF_DB_PASSWORD')
-        ]) {
-          dir('terraform') {
-            // Pass the credentials as TF vars
-            sh '''
-              terraform init -backend-config="bucket=jeffmeager-challenge-terraform-state-bucket" \
-                             -backend-config="key=wiz-challenge/terraform.tfstate" \
-                             -backend-config="region=${AWS_DEFAULT_REGION}" \
-                             -backend-config="profile=${AWS_PROFILE}"
-            '''
-          }
-          }
-        }
-      }
-    
- stage('Terraform Apply') {
+        stage('Terraform Init') {
             steps {
+                withCredentials([
+                string(credentialsId: 'rds-db-username', variable: 'TF_DB_USERNAME'),
+                string(credentialsId: 'rds-db-password', variable: 'TF_DB_PASSWORD')
+                ]) {
                 dir('terraform') {
+                    // Pass the credentials as TF vars
                     sh '''
-                        terraform apply -auto-approve \
-                            -var="db_username=${TF_DB_USERNAME}" \
-                            -var="db_password=${TF_DB_PASSWORD}" \
-                            -var="region=${AWS_DEFAULT_REGION}" \
-                            -var="profile=${AWS_PROFILE}"
+                    terraform init -backend-config="bucket=jeffmeager-challenge-terraform-state-bucket" \
+                                    -backend-config="key=wiz-challenge/terraform.tfstate" \
+                                    -backend-config="region=${AWS_DEFAULT_REGION}" \
+                                    -backend-config="profile=${AWS_PROFILE}"
                     '''
                 }
+                }
+                }
             }
-
-
+            
+        stage('Terraform Apply') {
+                    steps {
+                        dir('terraform') {
+                            sh '''
+                                terraform apply -auto-approve \
+                                    -var="db_username=${TF_DB_USERNAME}" \
+                                    -var="db_password=${TF_DB_PASSWORD}" \
+                                    -var="region=${AWS_DEFAULT_REGION}" \
+                                    -var="profile=${AWS_PROFILE}"
+                            '''
+                        }
+                    }
+        }
         stage('Deploy WebApp') {
             steps {
                 dir('kubernetes/deployments') {
@@ -79,4 +78,5 @@ pipeline {
             echo '⚠️ Deployment encountered issues'
         }
     }
+
 }

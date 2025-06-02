@@ -7,19 +7,20 @@ pipeline {
         AWS_DEFAULT_REGION  = 'ap-southeast-2'
     }
     
-
-stage('Create State Bucket') {
-    steps {
-        dir('terraform-state') {
-            sh '''
-              terraform init
-              terraform apply -auto-approve
-            '''
+    stages {
+        stage('Create State Bucket') {
+            steps {
+                dir('terraform-state') {
+                    sh '''
+                    terraform init
+                    terraform apply -auto-approve
+                    '''
+                }
+            }
         }
     }
-}
 
-post {
+    post {
         success {
             echo '🚀 Terraform S3 state bucket created successfully'
         }
@@ -27,4 +28,5 @@ post {
             echo '⚠️ Terraform S3 state bucket deployment encountered issues'
         }
     }
+    
 }
