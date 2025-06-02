@@ -17,10 +17,7 @@ pipeline {
 
         stage('Terraform Init') {
             steps {
-                withCredentials([
-                string(credentialsId: 'rds-db-username', variable: 'TF_VAR_db_username'),
-                string(credentialsId: 'rds-db-password', variable: 'TF_VAR_db_password')
-                ]) {
+                
                 dir('terraform') {
                     sh '''
                     terraform init -backend-config="bucket=jeffmeager-challenge-terraform-state-bucket" \
@@ -28,21 +25,26 @@ pipeline {
                                     -backend-config="region=${AWS_DEFAULT_REGION}" \
                                     -backend-config="profile=${AWS_PROFILE}"
                     '''
-                }
+                
                 }
                 }
             }
             
         stage('Terraform Apply') {
                     steps {
-                        dir('terraform') {
-                            sh '''
-                                terraform apply -auto-approve \
-                                    -var="region=${AWS_DEFAULT_REGION}" \
-                                    -var="profile=${AWS_PROFILE}"
-                            '''
+                        withCredentials([
+                            string(credentialsId: 'rds-db-username', variable: 'TF_VAR_db_username'),
+                            string(credentialsId: 'rds-db-password', variable: 'TF_VAR_db_password')
+                            ]) {
+                                dir('terraform') {
+                                    sh '''
+                                        terraform apply -auto-approve \
+                                        -var="region=${AWS_DEFAULT_REGION}" \
+                                        -var="profile=${AWS_PROFILE}"
+                                    '''
+                                }
                         }
-                    }
+                    }       
         }
 
         stage('Configure kubectl') {
