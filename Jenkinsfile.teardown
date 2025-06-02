@@ -1,3 +1,14 @@
+// This Jenkinsfile is designed to tear down the infrastructure and workloads created in the previous stages.
+// It includes stages to configure kubectl, delete the web application, initialize Terraform, and destroy the infrastructure.
+// The post section provides feedback on the success or failure of the teardown process.
+// The use of `withCredentials` ensures that sensitive information like database credentials are handled securely.
+// The script uses `|| true` to ignore errors when deleting resources that may not exist, allowing the pipeline to continue smoothly.
+// The `terraform init` command is configured to use a specific S3 bucket for state management, ensuring that the state is consistent across runs.
+// The `terraform destroy` command is used to clean up all resources created by Terraform, ensuring that the environment is returned to a clean state.
+// The pipeline is structured to run on any available agent, making it flexible for different Jenkins environments.
+// The environment variables are set to ensure that the correct AWS profile and region are used throughout the pipeline.
+
+
 pipeline {
     agent any
 
@@ -9,13 +20,6 @@ pipeline {
     }
 
     stages {
-
-        stage('Checkout') {
-            steps {
-                git url: 'https://github.com/jeffmeager/K8s.git', branch: 'main'
-            }
-        }
-
         stage('Configure kubectl') {
             steps {
                 sh '''
@@ -27,49 +31,56 @@ pipeline {
             }
         }
 
-        stage('Destroy WebApp') {
+        stage('Delete WebApp') {
             steps {
                 dir('kubernetes/services') {
-                    sh 'kubectl delete -f webapp-service.yaml --ignore-not-found'
+                    sh 'kubectl delete -f webapp-service.yaml || true'
                 }
                 dir('kubernetes/deployments') {
-                    sh 'kubectl delete -f webapp-deployment.yaml --ignore-not-found'
+                    sh 'kubectl delete -f webapp-deployment.yaml || true'
                 }
             }
         }
 
         stage('Terraform Init') {
             steps {
+                
                 dir('terraform') {
                     sh '''
-                        terraform init -backend-config="bucket=jeffmeager-challenge-terraform-state-bucket" \
-                                       -backend-config="key=wiz-challenge/terraform.tfstate" \
-                                       -backend-config="region=${AWS_DEFAULT_REGION}" \
-                                       -backend-config="profile=${AWS_PROFILE}"
+                    terraform init -backend-config="bucket=jeffmeager-challenge-terraform-state-bucket" \
+                                    -backend-config="key=wiz-challenge/terraform.tfstate" \
+                                    -backend-config="region=${AWS_DEFAULT_REGION}" \
+                                    -backend-config="profile=${AWS_PROFILE}"
                     '''
+                
+                }
                 }
             }
-        }
 
         stage('Terraform Destroy') {
-            steps {
-                dir('terraform') {
-                    sh '''
-                        terraform destroy -auto-approve \
-                            -var="region=${AWS_DEFAULT_REGION}" \
-                            -var="profile=${AWS_PROFILE}"
-                    '''
-                }
-            }
+                    steps {
+                        withCredentials([
+                            string(credentialsId: 'rds-db-username', variable: 'TF_VAR_db_username'),
+                            string(credentialsId: 'rds-db-password', variable: 'TF_VAR_db_password')
+                            ]) {
+                                dir('terraform') {
+                                    sh '''
+                                        terraform destroy -auto-approve \
+                                        -var="region=${AWS_DEFAULT_REGION}" \
+                                        -var="profile=${AWS_PROFILE}"
+                                    '''
+                                }
+                        }
+                    }       
         }
     }
 
     post {
         success {
-            echo '🗑️ Infrastructure and workloads successfully destroyed'
+            echo '🧹 Infrastructure and workloads successfully cleaned up'
         }
         failure {
-            echo '⚠️ Teardown encountered issues'
+            echo '⚠️ Something went wrong while tearing down'
         }
     }
 }

@@ -4,7 +4,7 @@ provider "aws" {
 }
 
 resource "aws_s3_bucket" "terraform_state" {
-  bucket = "jeffmeager-challenge-terraform-state-bucket"
+  bucket = var.state_bucket
 
   lifecycle {
     prevent_destroy = true
