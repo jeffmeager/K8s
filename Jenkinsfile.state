@@ -12,14 +12,22 @@ pipeline {
             steps {
                 dir('terraform-state') {
                     script {
-                        def output = sh(script: "terraform init && terraform apply -auto-approve", returnStatus: true)
-                        if (output != 0) {
-                            def log = sh(script: "terraform apply -auto-approve", returnStdout: true, returnStatus: true)
-                            if (log.contains("BucketAlreadyOwnedByYou")) {
+                        def result = sh(
+                            script: "terraform init && terraform apply -auto-approve",
+                            returnStatus: true
+                        )
+
+                        if (result != 0) {
+                            def output = sh(
+                                script: "terraform apply -auto-approve",
+                                returnStdout: true
+                            ).trim()
+
+                            if (output.contains("BucketAlreadyOwnedByYou")) {
                                 echo "⚠️ Bucket already exists and is owned by you. Skipping creation."
                                 currentBuild.result = 'SUCCESS'
                             } else {
-                                error("Terraform failed:\n${log}")
+                                error("Terraform failed:\n${output}")
                             }
                         }
                     }
