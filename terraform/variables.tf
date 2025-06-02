@@ -26,9 +26,3 @@ variable "db_password" {
   sensitive   = true
 }
 
-// Ensure to define you're own bucket
-variable "state_bucket" {
-  description = "S3 bucket used to store terraform state to allow for destroy pipeline"
-  type        = string
-  default     = "jeffmeager-challenge-terraform-state-bucket"
-}
