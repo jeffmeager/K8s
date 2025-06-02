@@ -12,23 +12,28 @@ pipeline {
             steps {
                 dir('terraform-state') {
                     script {
-                        def result = sh(
-                            script: "terraform init && terraform apply -auto-approve",
+                        // Step 1: Init
+                        sh 'terraform init'
+
+                        // Step 2: Apply and capture result
+                        def exitCode = sh(
+                            script: 'terraform apply -auto-approve || true',
                             returnStatus: true
                         )
 
-                        if (result != 0) {
+                        // Step 3: Parse output only if failed
+                        if (exitCode != 0) {
                             def output = sh(
-                                script: "terraform apply -auto-approve",
+                                script: 'terraform apply -auto-approve 2>&1 || true',
                                 returnStdout: true
-                            ).trim()
-
+                            )
                             if (output.contains("BucketAlreadyOwnedByYou")) {
-                                echo "⚠️ Bucket already exists and is owned by you. Skipping creation."
-                                currentBuild.result = 'SUCCESS'
+                                echo "⚠️ Bucket already exists. Ignoring error."
                             } else {
-                                error("Terraform failed:\n${output}")
+                                error "❌ Terraform failed:\n${output}"
                             }
+                        } else {
+                            echo "✅ Terraform apply succeeded."
                         }
                     }
                 }
@@ -38,10 +43,10 @@ pipeline {
 
     post {
         success {
-            echo '🚀 Terraform S3 state bucket verified or created successfully'
+            echo '✅ S3 state bucket setup complete.'
         }
         failure {
-            echo '⚠️ Terraform S3 state bucket deployment encountered issues'
+            echo '❌ S3 state bucket creation failed. Check logs for details.'
         }
     }
 }

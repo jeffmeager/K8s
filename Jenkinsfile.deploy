@@ -15,17 +15,6 @@ pipeline {
             }
         }
 
-        stage('Configure kubectl') {
-            steps {
-                sh '''
-                    aws eks --region ${AWS_DEFAULT_REGION} \
-                      update-kubeconfig \
-                      --name ${EKS_CLUSTER_NAME} \
-                      --profile ${AWS_PROFILE}
-                '''
-            }
-        }
-
         stage('Terraform Init') {
             steps {
                 withCredentials([
@@ -58,6 +47,18 @@ pipeline {
                         }
                     }
         }
+
+        stage('Configure kubectl') {
+            steps {
+                sh '''
+                    aws eks --region ${AWS_DEFAULT_REGION} \
+                      update-kubeconfig \
+                      --name ${EKS_CLUSTER_NAME} \
+                      --profile ${AWS_PROFILE}
+                '''
+            }
+        }
+        
         stage('Deploy WebApp') {
             steps {
                 dir('kubernetes/deployments') {
