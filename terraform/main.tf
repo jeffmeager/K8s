@@ -20,10 +20,16 @@ resource "aws_subnet" "public" {
   availability_zone = "ap-southeast-2a"
   map_public_ip_on_launch = true
 }
-
-resource "aws_subnet" "private" {
+resource "aws_subnet" "private_az1" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = "10.0.2.0/24"
+  availability_zone = "ap-southeast-2a"
+}
+
+
+resource "aws_subnet" "private_az2" {
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = "10.0.3.0/24"
   availability_zone = "ap-southeast-2b"
 }
 
@@ -66,7 +72,7 @@ resource "aws_eks_cluster" "eks" {
   role_arn = aws_iam_role.eks.arn
 
   vpc_config {
-    subnet_ids = [aws_subnet.public.id, aws_subnet.private.id]
+    subnet_ids = [aws_subnet.public.id, aws_subnet.private_az1.id, aws_subnet.private_az2]
     security_group_ids = [aws_security_group.eks_cluster_sg.id]
   }
 }

@@ -26,7 +26,7 @@ resource "aws_db_subnet_group" "wordpress_subnet_group" {
   name       = "wordpress-db-subnet-group"
 
   # Use the private subnet declared in main.tf
-  subnet_ids = [aws_subnet.private.id]
+  subnet_ids = [aws_subnet.private_az1.id,aws_subnet.private_az2]
 
   tags = {
     Name = "wordpress-db-subnet-group"
