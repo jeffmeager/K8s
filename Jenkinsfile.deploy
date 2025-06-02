@@ -50,6 +50,7 @@ pipeline {
         stage('Configure kubectl') {
             steps {
                 sh '''
+                    echo "🔧 Updating kubeconfig..."
                     aws eks --region ${AWS_DEFAULT_REGION} \
                       update-kubeconfig \
                       --name ${EKS_CLUSTER_NAME} \
@@ -68,6 +69,36 @@ pipeline {
                 }
             }
         }
+
+        stage('Install CSI Driver and AWS Provider') {
+            steps {
+                withEnv(["AWS_PROFILE=devops-admin", "AWS_DEFAULT_REGION=ap-southeast-2"]) {
+                sh '''            
+                    echo "📦 Adding Helm repos..."
+                    helm repo add secrets-store-csi-driver https://kubernetes-sigs.github.io/secrets-store-csi-driver/charts
+                    helm repo add aws-secrets-provider https://aws.github.io/secrets-store-csi-driver-provider-aws
+                    helm repo update
+
+                    echo "🚀 Installing CSI Driver..."
+                    helm upgrade --install csi-secrets-store secrets-store-csi-driver/secrets-store-csi-driver \
+                    --namespace kube-system \
+                    --version 1.3.4 \
+                    --create-namespace \
+                    --wait \
+                    --set syncSecret.enabled=true \
+                    --set enableSecretRotation=true \
+                    --set enableCSIStorageCapacity=true
+
+                    echo "🔐 Installing AWS Provider..."
+                    helm upgrade --install secrets-store-csi-driver-provider-aws aws-secrets-provider/secrets-store-csi-driver-provider-aws \
+                    --namespace kube-system \
+                    --version 0.2.0 \
+                    --wait
+                '''
+                }
+            }
+        }
+
     }
 
     post {
