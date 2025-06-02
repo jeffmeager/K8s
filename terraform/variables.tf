@@ -9,3 +9,8 @@ variable "profile" {
   type        = string
   default     = "devops-admin"
 }
+
+variable "kubeconfig_path" {
+  type    = string
+  default = "~/.kube/config"
+}

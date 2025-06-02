@@ -1,0 +1,75 @@
+pipeline {
+    agent any
+
+    environment {
+        PATH                = "/opt/homebrew/bin:/usr/local/bin:${env.PATH}"
+        AWS_PROFILE         = 'devops-admin'
+        AWS_DEFAULT_REGION  = 'ap-southeast-2'
+        EKS_CLUSTER_NAME    = 'challenge-eks-cluster'
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                git url: 'https://github.com/jeffmeager/K8s.git', branch: 'main'
+            }
+        }
+
+        stage('Configure kubectl') {
+            steps {
+                sh '''
+                    aws eks --region ${AWS_DEFAULT_REGION} \
+                      update-kubeconfig \
+                      --name ${EKS_CLUSTER_NAME} \
+                      --profile ${AWS_PROFILE}
+                '''
+            }
+        }
+
+        stage('Destroy WebApp') {
+            steps {
+                dir('kubernetes/services') {
+                    sh 'kubectl delete -f webapp-service.yaml --ignore-not-found'
+                }
+                dir('kubernetes/deployments') {
+                    sh 'kubectl delete -f webapp-deployment.yaml --ignore-not-found'
+                }
+            }
+        }
+
+        stage('Terraform Init') {
+            steps {
+                dir('terraform') {
+                    sh '''
+                        terraform init -backend-config="bucket=jeffmeager-challenge-terraform-state-bucket" \
+                                       -backend-config="key=wiz-challenge/terraform.tfstate" \
+                                       -backend-config="region=${AWS_DEFAULT_REGION}" \
+                                       -backend-config="profile=${AWS_PROFILE}"
+                    '''
+                }
+            }
+        }
+
+        stage('Terraform Destroy') {
+            steps {
+                dir('terraform') {
+                    sh '''
+                        terraform destroy -auto-approve \
+                            -var="region=${AWS_DEFAULT_REGION}" \
+                            -var="profile=${AWS_PROFILE}"
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo '🗑️ Infrastructure and workloads successfully destroyed'
+        }
+        failure {
+            echo '⚠️ Teardown encountered issues'
+        }
+    }
+}

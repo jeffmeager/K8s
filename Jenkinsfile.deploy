@@ -1,0 +1,82 @@
+pipeline {
+    agent any
+
+    environment {
+        PATH                = "/opt/homebrew/bin:/usr/local/bin:${env.PATH}"
+        AWS_PROFILE         = 'devops-admin'
+        AWS_DEFAULT_REGION  = 'ap-southeast-2'
+        EKS_CLUSTER_NAME    = 'challenge-eks-cluster'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git url: 'https://github.com/jeffmeager/K8s.git', branch: 'main'
+            }
+        }
+
+        stage('Configure kubectl') {
+            steps {
+                sh '''
+                    aws eks --region ${AWS_DEFAULT_REGION} \
+                      update-kubeconfig \
+                      --name ${EKS_CLUSTER_NAME} \
+                      --profile ${AWS_PROFILE}
+                '''
+            }
+        }
+
+ stage('Terraform Init') {
+      steps {
+        withCredentials([
+          string(credentialsId: 'rds-db-username', variable: 'TF_DB_USERNAME'),
+          string(credentialsId: 'rds-db-password', variable: 'TF_DB_PASSWORD')
+        ]) {
+          dir('terraform') {
+            // Pass the credentials as TF vars
+            sh '''
+              terraform init -backend-config="bucket=jeffmeager-challenge-terraform-state-bucket" \
+                             -backend-config="key=wiz-challenge/terraform.tfstate" \
+                             -backend-config="region=${AWS_DEFAULT_REGION}" \
+                             -backend-config="profile=${AWS_PROFILE}"
+            '''
+          }
+          }
+        }
+      }
+    
+ stage('Terraform Apply') {
+            steps {
+                dir('terraform') {
+                    sh '''
+                        terraform apply -auto-approve \
+                            -var="db_username=${TF_DB_USERNAME}" \
+                            -var="db_password=${TF_DB_PASSWORD}" \
+                            -var="region=${AWS_DEFAULT_REGION}" \
+                            -var="profile=${AWS_PROFILE}"
+                    '''
+                }
+            }
+
+
+        stage('Deploy WebApp') {
+            steps {
+                dir('kubernetes/deployments') {
+                    sh 'kubectl apply -f webapp-deployment.yaml'
+                }
+                dir('kubernetes/services') {
+                    sh 'kubectl apply -f webapp-service.yaml'
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo '🚀 Infrastructure and workloads successfully deployed'
+        }
+        failure {
+            echo '⚠️ Deployment encountered issues'
+        }
+    }
+}

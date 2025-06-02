@@ -1,0 +1,30 @@
+pipeline {
+    agent any
+    
+    environment {
+        PATH                = "/opt/homebrew/bin:/usr/local/bin:${env.PATH}"
+        AWS_PROFILE         = 'devops-admin'
+        AWS_DEFAULT_REGION  = 'ap-southeast-2'
+    }
+    
+
+stage('Create State Bucket') {
+    steps {
+        dir('terraform-state') {
+            sh '''
+              terraform init
+              terraform apply -auto-approve
+            '''
+        }
+    }
+}
+
+post {
+        success {
+            echo '🚀 Terraform S3 state bucket created successfully'
+        }
+        failure {
+            echo '⚠️ Terraform S3 state bucket deployment encountered issues'
+        }
+    }
+}
