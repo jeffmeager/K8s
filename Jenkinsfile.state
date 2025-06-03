@@ -12,30 +12,35 @@ pipeline {
     stages {
         stage('Create State Bucket') {
             steps {
-                dir('terraform-state') {
-                    script {
-                        // Step 1: Init
-                        sh 'terraform init'
+                withCredentials([
+                    string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
+                    string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY'),
+                ]) {
+                    dir('terraform-state') {
+                        script {
+                            // Step 1: Init
+                            sh 'terraform init'
 
-                        // Step 2: Apply and capture result
-                        def exitCode = sh(
-                            script: 'terraform apply -auto-approve || true',
-                            returnStatus: true
-                        )
-
-                        // Step 3: Parse output only if failed
-                        if (exitCode != 0) {
-                            def output = sh(
-                                script: 'terraform apply -auto-approve 2>&1 || true',
-                                returnStdout: true
+                            // Step 2: Apply and capture result
+                            def exitCode = sh(
+                                script: 'terraform apply -auto-approve || true',
+                                returnStatus: true
                             )
-                            if (output.contains("BucketAlreadyOwnedByYou")) {
-                                echo "⚠️ Bucket already exists. Ignoring error."
+
+                            // Step 3: Parse output only if failed
+                            if (exitCode != 0) {
+                                def output = sh(
+                                    script: 'terraform apply -auto-approve 2>&1 || true',
+                                    returnStdout: true
+                                )
+                                if (output.contains("BucketAlreadyOwnedByYou")) {
+                                    echo "⚠️ Bucket already exists. Ignoring error."
+                                } else {
+                                    error "❌ Terraform failed:\n${output}"
+                                }
                             } else {
-                                error "❌ Terraform failed:\n${output}"
+                                echo "✅ Terraform apply succeeded."
                             }
-                        } else {
-                            echo "✅ Terraform apply succeeded."
                         }
                     }
                 }

@@ -3,7 +3,6 @@ pipeline {
 
     environment {
         PATH                = "/opt/homebrew/bin:/usr/local/bin:${env.PATH}"
-        AWS_PROFILE         = 'devops-admin'
         AWS_DEFAULT_REGION  = 'ap-southeast-2'
         EKS_CLUSTER_NAME    = 'challenge-eks-cluster'
     }
@@ -15,64 +14,40 @@ pipeline {
             }
         }
 
-        stage('Terraform Init') {
+        stage('Terraform & Deploy') {
             steps {
-                
-                dir('terraform') {
+                withCredentials([
+                    string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
+                    string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY'),
+                    string(credentialsId: 'rds-db-username', variable: 'TF_VAR_db_username'),
+                    string(credentialsId: 'rds-db-password', variable: 'TF_VAR_db_password')
+                ]) {
+                    dir('terraform') {
+                        sh '''
+                            terraform init \
+                              -backend-config="bucket=jeffmeager-challenge-terraform-state-bucket" \
+                              -backend-config="key=wiz-challenge/terraform.tfstate" \
+                              -backend-config="region=${AWS_DEFAULT_REGION}"
+
+                            terraform apply -auto-approve \
+                              -var="region=${AWS_DEFAULT_REGION}"
+                        '''
+                    }
+
                     sh '''
-                    terraform init -backend-config="bucket=jeffmeager-challenge-terraform-state-bucket" \
-                                    -backend-config="key=wiz-challenge/terraform.tfstate" \
-                                    -backend-config="region=${AWS_DEFAULT_REGION}" \
-                                    -backend-config="profile=${AWS_PROFILE}"
+                        echo "🔧 Updating kubeconfig..."
+                        aws eks --region ${AWS_DEFAULT_REGION} \
+                          update-kubeconfig \
+                          --name ${EKS_CLUSTER_NAME}
                     '''
-                
-                }
-                }
-            }
-            
-        stage('Terraform Apply') {
-                    steps {
-                        withCredentials([
-                            string(credentialsId: 'rds-db-username', variable: 'TF_VAR_db_username'),
-                            string(credentialsId: 'rds-db-password', variable: 'TF_VAR_db_password')
-                            ]) {
-                                dir('terraform') {
-                                    sh '''
-                                        terraform apply -auto-approve \
-                                        -var="region=${AWS_DEFAULT_REGION}" \
-                                        -var="profile=${AWS_PROFILE}"
-                                    '''
-                                }
-                        }
-                    }       
-        }
 
-        stage('Configure kubectl') {
-            steps {
-                sh '''
-                    echo "🔧 Updating kubeconfig..."
-                    aws eks --region ${AWS_DEFAULT_REGION} \
-                      update-kubeconfig \
-                      --name ${EKS_CLUSTER_NAME} \
-                      --profile ${AWS_PROFILE}
-                '''
-            }
-        }
-        
-        stage('Deploy WebApp') {
-            steps {
-                dir('kubernetes/deployments') {
-                    sh 'kubectl apply -f webapp-deployment.yaml'
-                }
-                dir('kubernetes/services') {
-                    sh 'kubectl apply -f webapp-service.yaml'
-                }
-            }
-        }
+                    dir('kubernetes/deployments') {
+                        sh 'kubectl apply -f webapp-deployment.yaml'
+                    }
+                    dir('kubernetes/services') {
+                        sh 'kubectl apply -f webapp-service.yaml'
+                    }
 
-        stage('Install CSI Driver and AWS Provider') {
-            steps {
-                withEnv(["AWS_PROFILE=devops-admin", "AWS_DEFAULT_REGION=ap-southeast-2"]) {
                     sh '''
                         echo "📦 Adding Helm repos..."
                         helm repo add secrets-store-csi-driver https://kubernetes-sigs.github.io/secrets-store-csi-driver/charts || true
@@ -108,8 +83,6 @@ pipeline {
                 }
             }
         }
-
-
     }
 
     post {
@@ -120,5 +93,4 @@ pipeline {
             echo '⚠️ Deployment encountered issues'
         }
     }
-
 }

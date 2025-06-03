@@ -1,6 +1,5 @@
 provider "aws" {
   region  = "ap-southeast-2"
-  profile = "devops-admin"
 }
 
 // Ensure to define you're own bucket

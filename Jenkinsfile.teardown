@@ -14,82 +14,86 @@ pipeline {
 
     environment {
         PATH                = "/opt/homebrew/bin:/usr/local/bin:${env.PATH}"
-        AWS_PROFILE         = 'devops-admin'
         AWS_DEFAULT_REGION  = 'ap-southeast-2'
         EKS_CLUSTER_NAME    = 'challenge-eks-cluster'
     }
 
     stages {
-        stage('Configure kubectl and delete helm and app') {
-            steps {
-                sh '''
-                    echo "🔍 Checking if EKS cluster '${EKS_CLUSTER_NAME}' exists..."
-                    if aws eks describe-cluster --name ${EKS_CLUSTER_NAME} --region ${AWS_DEFAULT_REGION} --profile ${AWS_PROFILE} >/dev/null 2>&1; then
-                        echo "✅ Cluster found. Updating kubeconfig..."
-                        aws eks update-kubeconfig \
-                            --name ${EKS_CLUSTER_NAME} \
-                            --region ${AWS_DEFAULT_REGION} \
-                            --profile ${AWS_PROFILE}
-
-                        kubectl delete -f kubernetes/services/webapp-service.yaml || true
-                        kubectl delete -f kubernetes/deployments/webapp-deployment.yaml || true
-
-                        // Helm chart cleanup
-                        echo "🧹 Uninstalling Helm charts..."
-                        helm uninstall csi-secrets-store -n kube-system || true
-                        helm uninstall secrets-store-csi-driver-provider-aws -n kube-system || true
-
-                    else
-                        echo "⚠️ Cluster '${EKS_CLUSTER_NAME}' not found. Skipping kubeconfig update."
-                    fi
-                '''
-            }
-        }
-
-        stage('Terraform Init') {
-            steps {
-                
-                dir('terraform') {
-                    sh '''
-                    terraform init -backend-config="bucket=jeffmeager-challenge-terraform-state-bucket" \
-                                    -backend-config="key=wiz-challenge/terraform.tfstate" \
-                                    -backend-config="region=${AWS_DEFAULT_REGION}" \
-                                    -backend-config="profile=${AWS_PROFILE}"
-                    '''           
-                }
-            }
-        }
-
-        stage('Terraform Destroy') {
-            steps {
-                withCredentials([
-                    string(credentialsId: 'rds-db-username', variable: 'TF_VAR_db_username'),
-                    string(credentialsId: 'rds-db-password', variable: 'TF_VAR_db_password')
-                    ]) {
-                        dir('terraform') {
-                            sh '''
-                                terraform destroy -auto-approve \
-                                -var="region=${AWS_DEFAULT_REGION}" \
-                                -var="profile=${AWS_PROFILE}"
-                            '''
-                        }
-                }
-            }       
-        }
-        // Force delete the secret so it can be reused
-        stage('Force delete secrets') {
+        withCredentials([
+                    string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
+                    string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY'),
+        
+        ]) {
+            stage('Configure kubectl and delete helm and app') {
                 steps {
                     sh '''
-                        aws secretsmanager delete-secret \
-                            --secret-id wordpress-db-password \
-                            --force-delete-without-recovery \
-                            --region ap-southeast-2 \
-                            --profile devops-admin
+                        echo "🔍 Checking if EKS cluster '${EKS_CLUSTER_NAME}' exists..."
+                        if aws eks describe-cluster --name ${EKS_CLUSTER_NAME} --region ${AWS_DEFAULT_REGION} --profile ${AWS_PROFILE} >/dev/null 2>&1; then
+                            echo "✅ Cluster found. Updating kubeconfig..."
+                            aws eks update-kubeconfig \
+                                --name ${EKS_CLUSTER_NAME} \
+                                --region ${AWS_DEFAULT_REGION} \
+                                --profile ${AWS_PROFILE}
+
+                            kubectl delete -f kubernetes/services/webapp-service.yaml || true
+                            kubectl delete -f kubernetes/deployments/webapp-deployment.yaml || true
+
+                            // Helm chart cleanup
+                            echo "🧹 Uninstalling Helm charts..."
+                            helm uninstall csi-secrets-store -n kube-system || true
+                            helm uninstall secrets-store-csi-driver-provider-aws -n kube-system || true
+
+                        else
+                            echo "⚠️ Cluster '${EKS_CLUSTER_NAME}' not found. Skipping kubeconfig update."
+                        fi
                     '''
                 }
+            }
+
+            stage('Terraform Init') {
+                steps {
+                    
+                    dir('terraform') {
+                        sh '''
+                        terraform init -backend-config="bucket=jeffmeager-challenge-terraform-state-bucket" \
+                                        -backend-config="key=wiz-challenge/terraform.tfstate" \
+                                        -backend-config="region=${AWS_DEFAULT_REGION}" \
+                                        -backend-config="profile=${AWS_PROFILE}"
+                        '''           
+                    }
+                }
+            }
+
+            stage('Terraform Destroy') {
+                steps {
+                    withCredentials([
+                        string(credentialsId: 'rds-db-username', variable: 'TF_VAR_db_username'),
+                        string(credentialsId: 'rds-db-password', variable: 'TF_VAR_db_password')
+                        ]) {
+                            dir('terraform') {
+                                sh '''
+                                    terraform destroy -auto-approve \
+                                    -var="region=${AWS_DEFAULT_REGION}" \
+                                    -var="profile=${AWS_PROFILE}"
+                                '''
+                            }
+                    }
+                }       
+            }
+            // Force delete the secret so it can be reused
+            stage('Force delete secrets') {
+                    steps {
+                        sh '''
+                            aws secretsmanager delete-secret \
+                                --secret-id wordpress-db-password \
+                                --force-delete-without-recovery \
+                                --region ap-southeast-2 \
+                                --profile devops-admin
+                        '''
+                    }
+            }
         }
     }
-
     post {
         success {
             echo '🧹 Infrastructure and workloads successfully cleaned up'
