@@ -1,3 +1,12 @@
+terraform {
+  backend "s3" {
+    bucket         = "jeffmeager-challenge-terraform-state-bucket"
+    key            = "wiz-challenge/terraform-aws_auth.tfstate"
+    region         = "ap-southeast-2"
+    encrypt        = true
+  }
+}
+
 resource "kubernetes_manifest" "aws_auth" {
   manifest = {
     apiVersion = "v1"
