@@ -1,11 +1,12 @@
-terraform {
-  backend "s3" {
-    bucket         = "jeffmeager-challenge-terraform-state-bucket"
-    key            = "wiz-challenge/terraform-aws_auth.tfstate"
-    region         = "ap-southeast-2"
-    encrypt        = true
+data "terraform_remote_state" "eks" {
+  backend = "s3"
+  config = {
+    bucket = "jeffmeager-challenge-terraform-state-bucket"
+    key    = "wiz-challenge/terraform.tfstate"  # <-- Path to phase 1 state
+    region = "ap-southeast-2"
   }
 }
+
 
 resource "kubernetes_manifest" "aws_auth" {
   manifest = {
@@ -18,7 +19,7 @@ resource "kubernetes_manifest" "aws_auth" {
     data = {
       mapRoles = yamlencode([
         {
-          rolearn  = aws_iam_role.eks_node.arn
+          rolearn  = data.terraform_remote_state.eks.outputs.eks_node_role_arn
           username = "system:node:{{EC2PrivateDNSName}}"
           groups   = [
             "system:bootstrappers",
@@ -35,6 +36,4 @@ resource "kubernetes_manifest" "aws_auth" {
       ])
     }
   }
-
-  depends_on = [aws_eks_node_group.node]
 }

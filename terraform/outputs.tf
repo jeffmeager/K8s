@@ -25,3 +25,7 @@ output "rds_endpoint" {
 output "db_password_secret_arn" {
   value = aws_secretsmanager_secret.wordpress_db_password.arn
 }
+
+output "eks_node_role_arn" {
+  value = aws_iam_role.eks_node.arn
+}
