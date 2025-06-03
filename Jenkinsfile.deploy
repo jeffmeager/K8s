@@ -83,6 +83,31 @@ pipeline {
                 }
             }
         }
+        stage('aws_auth configmap') {
+            steps {
+                withCredentials([
+                    string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
+                    string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
+                ]) {
+                    dir('terraform-aws_auth') {
+                        sh '''
+                            echo "🔧 Updating kubeconfig..."
+                            aws eks --region ${AWS_DEFAULT_REGION} \
+                                update-kubeconfig \
+                                --name ${EKS_CLUSTER_NAME}
+
+                            terraform init \
+                              -backend-config="bucket=jeffmeager-challenge-terraform-state-bucket" \
+                              -backend-config="key=wiz-challenge/terraform-aws_auth.tfstate" \
+                              -backend-config="region=${AWS_DEFAULT_REGION}"
+
+                            terraform apply -auto-approve \
+                              -var="region=${AWS_DEFAULT_REGION}"
+                        '''
+                    }
+                }   
+            }
+        }
     }
 
     post {
