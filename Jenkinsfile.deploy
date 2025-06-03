@@ -8,104 +8,101 @@ pipeline {
     }
 
     stages {
-        withCredentials([
+        stage('Checkout') {
+            steps {
+                git url: 'https://github.com/jeffmeager/K8s.git', branch: 'main'
+            }
+        }
+
+        stage('Terraform & Deploy') {
+            steps {
+                withCredentials([
                     string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
-                    string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
-        ]) {
-            stage('Checkout') {
-                steps {
-                    git url: 'https://github.com/jeffmeager/K8s.git', branch: 'main'
+                    string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY'),
+                    string(credentialsId: 'rds-db-username', variable: 'TF_VAR_db_username'),
+                    string(credentialsId: 'rds-db-password', variable: 'TF_VAR_db_password')
+                ]) {
+                    dir('terraform') {
+                        sh '''
+                            terraform init \
+                              -backend-config="bucket=jeffmeager-challenge-terraform-state-bucket" \
+                              -backend-config="key=wiz-challenge/terraform.tfstate" \
+                              -backend-config="region=${AWS_DEFAULT_REGION}"
+
+                            terraform apply -auto-approve \
+                              -var="region=${AWS_DEFAULT_REGION}"
+                        '''
+                    }
+
+                    sh '''
+                        echo "🔧 Updating kubeconfig..."
+                        aws eks --region ${AWS_DEFAULT_REGION} \
+                          update-kubeconfig \
+                          --name ${EKS_CLUSTER_NAME}
+                    '''
+
+                    dir('kubernetes/deployments') {
+                        sh 'kubectl apply -f webapp-deployment.yaml'
+                    }
+                    dir('kubernetes/services') {
+                        sh 'kubectl apply -f webapp-service.yaml'
+                    }
+
+                    sh '''
+                        echo "📦 Adding Helm repos..."
+                        helm repo add secrets-store-csi-driver https://kubernetes-sigs.github.io/secrets-store-csi-driver/charts || true
+                        helm repo add aws-secrets-provider https://aws.github.io/secrets-store-csi-driver-provider-aws || true
+                        helm repo update
+
+                        echo "🔍 Checking if CSI Driver is already installed..."
+                        if ! helm status csi-secrets-store -n kube-system > /dev/null 2>&1; then
+                            echo "🚀 Installing CSI Driver..."
+                            helm install csi-secrets-store secrets-store-csi-driver/secrets-store-csi-driver \
+                            --namespace kube-system \
+                            --version 1.3.4 \
+                            --create-namespace \
+                            --wait \
+                            --set syncSecret.enabled=true \
+                            --set enableSecretRotation=true \
+                            --set enableCSIStorageCapacity=true
+                        else
+                            echo "✅ CSI Driver already installed. Skipping."
+                        fi
+
+                        echo "🔍 Checking if AWS Provider is already installed..."
+                        if ! helm status secrets-store-csi-driver-provider-aws -n kube-system > /dev/null 2>&1; then
+                            echo "🔐 Installing AWS Provider..."
+                            helm install secrets-store-csi-driver-provider-aws aws-secrets-provider/secrets-store-csi-driver-provider-aws \
+                            --namespace kube-system \
+                            --version 0.2.0 \
+                            --wait
+                        else
+                            echo "✅ AWS Provider already installed. Skipping."
+                        fi
+                    '''
                 }
             }
-
-            stage('Terraform & Deploy') {
-                steps {
-                    withCredentials([
-                        string(credentialsId: 'rds-db-username', variable: 'TF_VAR_db_username'),
-                        string(credentialsId: 'rds-db-password', variable: 'TF_VAR_db_password')
-                    ]) {
-                        dir('terraform') {
-                            sh '''
-                                terraform init \
-                                -backend-config="bucket=jeffmeager-challenge-terraform-state-bucket" \
-                                -backend-config="key=wiz-challenge/terraform.tfstate" \
-                                -backend-config="region=${AWS_DEFAULT_REGION}"
-
-                                terraform apply -auto-approve \
-                                -var="region=${AWS_DEFAULT_REGION}"
-                            '''
-                        }
-
+        }
+        stage('aws_auth configmap') {
+            steps {
+                withCredentials([
+                    string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
+                    string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
+                ]) {
+                    dir('terraform-aws_auth') {
                         sh '''
                             echo "🔧 Updating kubeconfig..."
                             aws eks --region ${AWS_DEFAULT_REGION} \
-                            update-kubeconfig \
-                            --name ${EKS_CLUSTER_NAME}
-                        '''
+                                update-kubeconfig \
+                                --name ${EKS_CLUSTER_NAME}
 
-                        dir('kubernetes/deployments') {
-                            sh 'kubectl apply -f webapp-deployment.yaml'
-                        }
-                        dir('kubernetes/services') {
-                            sh 'kubectl apply -f webapp-service.yaml'
-                        }
+                            terraform init
 
-                        sh '''
-                            echo "📦 Adding Helm repos..."
-                            helm repo add secrets-store-csi-driver https://kubernetes-sigs.github.io/secrets-store-csi-driver/charts || true
-                            helm repo add aws-secrets-provider https://aws.github.io/secrets-store-csi-driver-provider-aws || true
-                            helm repo update
-
-                            echo "🔍 Checking if CSI Driver is already installed..."
-                            if ! helm status csi-secrets-store -n kube-system > /dev/null 2>&1; then
-                                echo "🚀 Installing CSI Driver..."
-                                helm install csi-secrets-store secrets-store-csi-driver/secrets-store-csi-driver \
-                                --namespace kube-system \
-                                --version 1.3.4 \
-                                --create-namespace \
-                                --wait \
-                                --set syncSecret.enabled=true \
-                                --set enableSecretRotation=true \
-                                --set enableCSIStorageCapacity=true
-                            else
-                                echo "✅ CSI Driver already installed. Skipping."
-                            fi
-
-                            echo "🔍 Checking if AWS Provider is already installed..."
-                            if ! helm status secrets-store-csi-driver-provider-aws -n kube-system > /dev/null 2>&1; then
-                                echo "🔐 Installing AWS Provider..."
-                                helm install secrets-store-csi-driver-provider-aws aws-secrets-provider/secrets-store-csi-driver-provider-aws \
-                                --namespace kube-system \
-                                --version 0.2.0 \
-                                --wait
-                            else
-                                echo "✅ AWS Provider already installed. Skipping."
-                            fi
+                            terraform apply -auto-approve \
+                              -var="region=${AWS_DEFAULT_REGION}"
                         '''
                     }
-                }
-            }
-            stage('aws_auth configmap') {
-                steps {
-                    withCredentials([
-                        string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
-                        string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
-                    ]) {
-                        dir('terraform-aws_auth') {
-                            sh '''
-                                echo "🔧 Updating kubeconfig..."
-                                aws eks --region ${AWS_DEFAULT_REGION} \
-                                    update-kubeconfig \
-                                    --name ${EKS_CLUSTER_NAME}
-
-                                terraform init
-
-                                terraform apply -auto-approve \
-                                -var="region=${AWS_DEFAULT_REGION}"
-                            '''
-                        }
-                    }   
-                }
+                }   
             }
         }
     }
