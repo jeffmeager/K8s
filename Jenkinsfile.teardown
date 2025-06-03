@@ -61,8 +61,7 @@ pipeline {
                         sh '''
                         terraform init -backend-config="bucket=jeffmeager-challenge-terraform-state-bucket" \
                                         -backend-config="key=wiz-challenge/terraform.tfstate" \
-                                        -backend-config="region=${AWS_DEFAULT_REGION}" \
-                                        -backend-config="profile=${AWS_PROFILE}"
+                                        -backend-config="region=${AWS_DEFAULT_REGION}"
                         '''           
                     }
                 }
@@ -80,8 +79,7 @@ pipeline {
                         dir('terraform') {
                             sh '''
                                 terraform destroy -auto-approve \
-                                -var="region=${AWS_DEFAULT_REGION}" \
-                                -var="profile=${AWS_PROFILE}"
+                                -var="region=${AWS_DEFAULT_REGION}"
                             '''
                         }
                 }
@@ -98,8 +96,7 @@ pipeline {
                         aws secretsmanager delete-secret \
                             --secret-id wordpress-db-password \
                             --force-delete-without-recovery \
-                            --region ap-southeast-2 \
-                            --profile devops-admin
+                            --region ap-southeast-2
                     '''
                 }
             }
