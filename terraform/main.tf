@@ -34,7 +34,6 @@ resource "aws_subnet" "private_az1" {
   }
 }
 
-
 resource "aws_subnet" "private_az2" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = "10.0.3.0/24"
@@ -117,11 +116,6 @@ resource "aws_route_table_association" "private_az2" {
   subnet_id      = aws_subnet.private_az2.id
   route_table_id = aws_route_table.private.id
 }
-
-
-
-
-
 
 # Security Groups
 resource "aws_security_group" "eks_cluster_sg" {

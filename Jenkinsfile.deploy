@@ -20,10 +20,12 @@ pipeline {
                     string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
                     string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY'),
                     string(credentialsId: 'mongodb-username', variable: 'TF_VAR_mongodb_username'),
-                    string(credentialsId: 'mongodb-password', variable: 'TF_VAR_mongodb_password')
+                    string(credentialsId: 'mongodb-password', variable: 'TF_VAR_mongodb_password'),
+                    usernamePassword(credentialsId: 'Github_PAT', usernameVariable: 'github_username', passwordVariable: 'github_pat')
                 ]) {
                     dir('terraform') {
                         sh '''
+                            set -o errexit -o pipefail -o nounset
                             terraform init \
                               -backend-config="bucket=jeffmeager-challenge-terraform-state-bucket" \
                               -backend-config="key=wiz-challenge/terraform.tfstate" \
@@ -35,24 +37,48 @@ pipeline {
                     }
                     // refresh kubeconfig to use the new EKS cluster
                     sh '''
+                        set -o errexit -o pipefail -o nounset
                         echo "🔧 Updating kubeconfig..."
                         aws eks --region ${AWS_DEFAULT_REGION} \
                           update-kubeconfig \
                           --name ${EKS_CLUSTER_NAME}
                     '''
+                    // Add PAT secret to call private repo
+                    sh '''
+                        set -o errexit -o pipefail -o nounset
+                        kubectl create secret docker-registry ghcr-pull-secret \
+                            --docker-server=ghcr.io \
+                            --docker-username=$github_username \
+                            --docker-password=$github_pat \
+                            --docker-email=your-email@example.com \
+                            --dry-run=client -o yaml | kubectl apply -f -
+                    '''
+
                     // Apply Kubernetes manifests
                     dir('kubernetes/deployments') {
-                        sh 'kubectl apply -f cluster-admin-rolebinding.yaml'
+                        sh '''
+                            set -o errexit -o pipefail -o nounset
+                            kubectl apply -f cluster-admin-rolebinding.yaml
+                        '''
                     }
                     dir('kubernetes/deployments') {
-                        sh 'kubectl apply -f webapp-deployment.yaml'
+                        sh '''
+                            set -o errexit -o pipefail -o nounset
+                            kubectl apply -f mongodb-deployment.yaml
+                        '''
+                    }
+
                     }
                     dir('kubernetes/services') {
-                        sh 'kubectl apply -f webapp-service.yaml'
+                        sh '''
+                            set -o errexit -o pipefail -o nounset
+                            kubectl apply -f mongodb-service.yaml
+                        '''
                     }
 
                     sh '''
                         echo "📦 Adding Helm repos..."
+                        set -o errexit -o pipefail -o nounset
                         helm repo add secrets-store-csi-driver https://kubernetes-sigs.github.io/secrets-store-csi-driver/charts || true
                         helm repo add aws-secrets-provider https://aws.github.io/secrets-store-csi-driver-provider-aws || true
                         helm repo update
