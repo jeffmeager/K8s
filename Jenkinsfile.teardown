@@ -18,80 +18,67 @@ pipeline {
         EKS_CLUSTER_NAME    = 'challenge-eks-cluster'
     }
 
-    stages {       
-        stage('Configure kubectl and delete helm and app') {
-            steps {
-                withCredentials([
-                    string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
-                    string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY') 
-                ]) {
-                
-                sh '''
-                    echo "🔍 Checking if EKS cluster '${EKS_CLUSTER_NAME}' exists..."
-                    if aws eks describe-cluster --name ${EKS_CLUSTER_NAME} --region ${AWS_DEFAULT_REGION} --profile ${AWS_PROFILE} >/dev/null 2>&1; then
-                        echo "✅ Cluster found. Updating kubeconfig..."
-                        aws eks update-kubeconfig \
-                            --name ${EKS_CLUSTER_NAME} \
-                            --region ${AWS_DEFAULT_REGION} \
-                            --profile ${AWS_PROFILE}
-
-                        kubectl delete -f kubernetes/services/webapp-service.yaml || true
-                        kubectl delete -f kubernetes/deployments/webapp-deployment.yaml || true
-                        kubectl delete -f kubernetes/deployments/cluster-admin-rolebinding.yaml || true
-
-                        # Helm chart cleanup
-                        echo "🧹 Uninstalling Helm charts..."
-                        helm uninstall csi-secrets-store -n kube-system || true
-                        helm uninstall secrets-store-csi-driver-provider-aws -n kube-system || true
-
-                    else
-                        echo "⚠️ Cluster '${EKS_CLUSTER_NAME}' not found. Skipping kubeconfig update."
-                    fi
-                '''
-                }
-            }
-        }
-
-        stage('Terraform Init') {
+    stages {
+        stage('Teardown Pipeline') {
             steps {
                 withCredentials([
                     string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
                     string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY'),
-                    string(credentialsId: 'jeff.meager.net_admin_arn', variable: 'ADMIN_ROLE_ARN')  
-                ]) {    
-                    dir('terraform') {
+                    string(credentialsId: 'jeff.meager.net_admin_arn', variable: 'ADMIN_ROLE_ARN')
+                ]) {
+                    script {
+                        // Sub-stage 1: Configure kubectl and delete helm and app
                         sh '''
-                        terraform init -backend-config="bucket=jeffmeager-challenge-terraform-state-bucket" \
-                                        -backend-config="key=wiz-challenge/terraform.tfstate" \
-                                        -backend-config="region=ap-southeast-2"
-                        '''           
+                            echo "🔍 Checking if EKS cluster '${EKS_CLUSTER_NAME}' exists..."
+                            if aws eks describe-cluster --name ${EKS_CLUSTER_NAME} --region ${AWS_DEFAULT_REGION} --profile ${AWS_PROFILE} >/dev/null 2>&1; then
+                                echo "✅ Cluster found. Updating kubeconfig..."
+                                aws eks update-kubeconfig \
+                                    --name ${EKS_CLUSTER_NAME} \
+                                    --region ${AWS_DEFAULT_REGION} \
+                                    --profile ${AWS_PROFILE}
+
+                                kubectl delete -f kubernetes/services/webapp-service.yaml || true
+                                kubectl delete -f kubernetes/deployments/webapp-deployment.yaml || true
+                                kubectl delete -f kubernetes/deployments/cluster-admin-rolebinding.yaml || true
+
+                                echo "🧹 Uninstalling Helm charts..."
+                                helm uninstall csi-secrets-store -n kube-system || true
+                                helm uninstall secrets-store-csi-driver-provider-aws -n kube-system || true
+                            else
+                                echo "⚠️ Cluster '${EKS_CLUSTER_NAME}' not found. Skipping kubeconfig update."
+                            fi
+                        '''
+
+                        // Sub-stage 2: Terraform Init
+                        dir('terraform') {
+                            sh '''
+                                terraform init -backend-config="bucket=jeffmeager-challenge-terraform-state-bucket" \
+                                                -backend-config="key=wiz-challenge/terraform.tfstate" \
+                                                -backend-config="region=ap-southeast-2"
+                            '''
+                        }
+
+                        // Sub-stage 3: Terraform Destroy
+                        withCredentials([
+                            string(credentialsId: 'mongodb-username', variable: 'TF_VAR_mongodb_username'),
+                            string(credentialsId: 'mongodb-password', variable: 'TF_VAR_mongodb_password')
+                        ]) {
+                            dir('terraform') {
+                                sh '''
+                                    terraform destroy -auto-approve \
+                                        -var region=${AWS_DEFAULT_REGION} \
+                                        -var build_id="noop" \
+                                        -var admin_role_arns="[\"${ADMIN_ROLE_ARN}\"]" \
+                                        -var enable_aws_auth=true
+                                '''
+                            }
+                        }
                     }
                 }
             }
         }
-
-        stage('Terraform Destroy') {
-            steps {
-                withCredentials([
-                    string(credentialsId: 'mongodb-username', variable: 'TF_VAR_mongodb_username'),
-                    string(credentialsId: 'mongodb-password', variable: 'TF_VAR_mongodb_password'),
-                    string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
-                    string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY'),
-                    string(credentialsId: 'jeff.meager.net_admin_arn', variable: 'ADMIN_ROLE_ARN') 
-                ]) {
-                        dir('terraform') {
-                            sh """
-                                terraform destroy -auto-approve \
-                                    -var region=${AWS_DEFAULT_REGION} \
-                                    -var build_id="noop" \
-                                    -var admin_role_arns="[\"${ADMIN_ROLE_ARN}\"]" \
-                                    -var enable_aws_auth=true
-                            """
-                        }
-                }
-            }       
-        }   
     }
+
     post {
         success {
             echo '🧹 Infrastructure and workloads successfully cleaned up'
