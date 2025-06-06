@@ -227,7 +227,7 @@ resource "aws_instance" "mongodb_instance" {
               systemctl start mongod
               systemctl enable mongod
 
-              mongo --eval "db.getSiblingDB('admin').createUser({user: '${var.mongo_db_username}', pwd: '${var.mongo_db_password}', roles:[{role:'root', db:'admin'}]})"
+              mongo --eval "db.getSiblingDB('admin').createUser({user: '${var.mongodb_username}', pwd: '${var.mongodb_password}', roles:[{role:'root', db:'admin'}]})"
               EOF
 
   tags = {

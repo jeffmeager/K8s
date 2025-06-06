@@ -18,12 +18,12 @@ output "s3_backup_bucket_name" {
   value = aws_s3_bucket.backup_bucket.bucket
 }
 
-output "rds_endpoint" {
-  value = aws_db_instance.wordpress_db.endpoint
+output "mongodb_username_secret_arn" {
+  value = aws_secretsmanager_secret.mongodb_username.arn
 }
 
-output "db_password_secret_arn" {
-  value = aws_secretsmanager_secret.wordpress_db_password.arn
+output "mongodb_password_secret_arn" {
+  value = aws_secretsmanager_secret.mongodb_password.arn
 }
 
 output "eks_node_role_arn" {
