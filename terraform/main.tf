@@ -194,7 +194,7 @@ resource "aws_iam_role_policy_attachment" "eks_node_AdministratorAccess" {
 
 # EC2 Instance for MongoDB
 resource "aws_instance" "mongodb_instance" {
-  ami           = "ami-0fb04a16dfc31fac6"
+  ami           = "ami-055744c75048d8296"
   instance_type = "t3.micro"
   subnet_id     = aws_subnet.public.id
   user_data = <<-EOF
