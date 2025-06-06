@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         PATH                = "/opt/homebrew/bin:/usr/local/bin:${env.PATH}"
-        AWS_DEFAULT_REGION  = 'ap-southeast-2'
+        AWS_DEFAULT_REGION  = 'us-east-1'
         EKS_CLUSTER_NAME    = 'challenge-eks-cluster'
     }
 
@@ -46,18 +46,18 @@ pipeline {
                         aws secretsmanager create-secret \
                         --name mongodb-password \
                         --secret-string "$MONGO_PASS" \
-                        --region ap-southeast-2 || \
+                        --region us-east-1 || \
                         aws secretsmanager put-secret-value \
                         --secret-id mongodb-password \
                         --secret-string "$MONGO_PASS" \
-                        --region ap-southeast-2
+                        --region us-east-1
                     '''
                     }
 
                     // Apply Kubernetes manifests
                     dir('kubernetes/deployments') {
                         sh 'kubectl apply -f cluster-admin-rolebinding.yaml'
-                    
+                    }
                     dir('kubernetes/deployments') {
                         sh 'kubectl apply -f webapp-deployment.yaml'
                     }

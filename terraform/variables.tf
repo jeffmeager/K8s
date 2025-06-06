@@ -1,7 +1,7 @@
 variable "region" {
   description = "The AWS region to deploy resources"
   type        = string
-  default     = "ap-southeast-2"
+  default     = "us-east-1"
 }
 
 variable "kubeconfig_path" {

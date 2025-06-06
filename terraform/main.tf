@@ -19,7 +19,7 @@ resource "aws_vpc" "main" {
 resource "aws_subnet" "public" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = "10.0.1.0/24"
-  availability_zone = "ap-southeast-2a"
+  availability_zone = "us-east-1a"
   map_public_ip_on_launch = true
   tags = {
     Name = "Wiz Challenge"
@@ -28,7 +28,7 @@ resource "aws_subnet" "public" {
 resource "aws_subnet" "private_az1" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = "10.0.2.0/24"
-  availability_zone = "ap-southeast-2a"
+  availability_zone = "us-east-1a"
   tags = {
     Name = "Wiz Challenge"
   }
@@ -38,7 +38,7 @@ resource "aws_subnet" "private_az1" {
 resource "aws_subnet" "private_az2" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = "10.0.3.0/24"
-  availability_zone = "ap-southeast-2b"
+  availability_zone = "us-east-1b"
   tags = {
     Name = "Wiz Challenge"
   }
@@ -192,26 +192,10 @@ resource "aws_iam_role_policy_attachment" "eks_node_AdministratorAccess" {
 }
 # -----------------------------------------------------------------------------------
 
-# Collect link to really old Linux distro
-data "aws_ami" "ubuntu_1604" {
-  most_recent = true
-  owners      = ["099720109477"]
-
-  filter {
-    name   = "name"
-    values = ["ubuntu/images/hvm-ssd/ubuntu-xenial-16.04-amd64-server-*"]
-  }
-
-  filter {
-    name   = "virtualization-type"
-    values = ["hvm"]
-  }
-}
-
 # EC2 Instance for MongoDB
 resource "aws_instance" "mongodb_instance" {
-  ami           = data.aws_ami.ubuntu_1604.id
-  instance_type = "t2.micro"
+  ami           = "ami-0023bb7a9198100b9"
+  instance_type = "t3.micro"
   subnet_id     = aws_subnet.public.id
   user_data = <<-EOF
               #!/bin/bash
