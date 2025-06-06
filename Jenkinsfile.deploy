@@ -68,7 +68,6 @@ pipeline {
                         '''
                     }
 
-                    }
                     dir('kubernetes/services') {
                         sh '''
                             set -o errexit -o pipefail -o nounset
