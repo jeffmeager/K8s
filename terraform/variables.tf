@@ -1,3 +1,6 @@
+// Default "noop" added to assist with the teardown script complaining of missing values
+
+
 variable "region" {
   description = "The AWS region to deploy resources"
   type        = string
@@ -12,12 +15,14 @@ variable "kubeconfig_path" {
 variable "mongodb_username" {
   type        = string
   description = "MongoDB admin username"
+  default     = "noop"
   sensitive   = true
 }
 
 variable "mongodb_password" {
   type        = string
   description = "MongoDB admin password"
+  default     = "noop"
   sensitive   = true
 }
 
@@ -30,5 +35,6 @@ variable "build_id" {
 variable "admin_role_arns" {
   type        = list(string)
   description = "Admin IAM Role ARNs for EKS access"
+  default     = "noop"
   sensitive   = true
 }
