@@ -50,6 +50,14 @@ pipeline {
                           update-kubeconfig \
                           --name ${EKS_CLUSTER_NAME}
                     '''
+                    
+                    //Wait for nodes ready (prevents race conditions)
+                    sh '''
+                        set -o errexit -o pipefail -o nounset
+                        echo "⏳ Waiting for EKS nodes to be Ready..."
+                        kubectl wait --for=condition=Ready nodes --timeout=120s
+                    '''
+                    
                     // Add PAT secret to call private repo
                     sh '''
                         set -o errexit -o pipefail -o nounset

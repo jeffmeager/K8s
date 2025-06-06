@@ -12,7 +12,7 @@ data:
         - system:nodes
 %{ for rolearn in admin_role_arns ~}
     - rolearn: ${rolearn}
-      username: admin
+      username: admin-${replace(rolearn, "[:/]", "_")}
       groups:
         - system:masters
 %{ endfor ~}

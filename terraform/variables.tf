@@ -1,6 +1,5 @@
 // Default "noop" added to assist with the teardown script complaining of missing values
 
-
 variable "region" {
   description = "The AWS region to deploy resources"
   type        = string
@@ -37,10 +36,4 @@ variable "admin_role_arns" {
   description = "Admin IAM Role ARNs for EKS access"
   default     = []
   sensitive   = true
-}
-
-variable "enable_aws_auth" {
-  description = "Enable aws-auth config map management"
-  type        = bool
-  default     = true
 }

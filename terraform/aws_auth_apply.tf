@@ -6,8 +6,10 @@ locals {
 }
 
 resource "local_file" "aws_auth_yaml" {
-  content  = local.aws_auth_yaml
-  filename = "${path.module}/../kubernetes/deployments/aws-auth.yaml"
+  content              = local.aws_auth_yaml
+  filename             = "${path.module}/../kubernetes/deployments/aws-auth.yaml"
+  file_permission      = "0777"
+  directory_permission = "0777"
 }
 
 resource "null_resource" "aws_auth_apply" {
