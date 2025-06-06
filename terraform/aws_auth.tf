@@ -12,7 +12,7 @@ resource "kubernetes_config_map" "aws_auth" {
       concat(
         [
           {
-            rolearn  = data.aws_eks_node_group.default.node_role_arn
+            rolearn  = aws_eks_node_group.node.node_role_arn
             username = "system:node:{{EC2PrivateDNSName}}"
             groups   = [
               "system:bootstrappers",

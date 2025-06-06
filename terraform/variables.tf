@@ -38,3 +38,9 @@ variable "admin_role_arns" {
   default     = []
   sensitive   = true
 }
+
+variable "enable_aws_auth" {
+  description = "Enable aws-auth config map management"
+  type        = bool
+  default     = true
+}
