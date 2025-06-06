@@ -21,7 +21,8 @@ pipeline {
                     string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY'),
                     string(credentialsId: 'mongodb-username', variable: 'TF_VAR_mongodb_username'),
                     string(credentialsId: 'mongodb-password', variable: 'TF_VAR_mongodb_password'),
-                    usernamePassword(credentialsId: 'Github_PAT', usernameVariable: 'github_username', passwordVariable: 'github_pat')
+                    usernamePassword(credentialsId: 'Github_PAT', usernameVariable: 'github_username', passwordVariable: 'github_pat'),
+                    string(credentialsId: 'jeff.meager_admin_arn', variable: 'ADMIN_ROLE_ARN')
                 ]) {
                     dir('terraform') {
                         script {
@@ -36,7 +37,8 @@ pipeline {
 
                                 terraform apply -auto-approve \
                                     -var="region=${AWS_DEFAULT_REGION}" \
-                                    -var="build_id=${BUILD_TIMESTAMP}"
+                                    -var="build_id=${BUILD_TIMESTAMP}" \
+                                    -var="admin_role_arns=[\\"${ADMIN_ROLE_ARN}\\"]"
                             """
                         }     
                     }

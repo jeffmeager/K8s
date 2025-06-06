@@ -12,6 +12,7 @@ variable "kubeconfig_path" {
 variable "mongodb_username" {
   type        = string
   description = "MongoDB admin username"
+  sensitive   = true
 }
 
 variable "mongodb_password" {
@@ -23,4 +24,11 @@ variable "mongodb_password" {
 variable "build_id" {
   type        = string
   description = "Build identifier for unique secret naming"
+  default     = "noop"
+}
+
+variable "admin_role_arns" {
+  type        = list(string)
+  description = "Admin IAM Role ARNs for EKS access"
+  sensitive   = true
 }
