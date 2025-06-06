@@ -14,7 +14,7 @@ pipeline {
 
     environment {
         PATH                = "/opt/homebrew/bin:/usr/local/bin:${env.PATH}"
-        AWS_DEFAULT_REGION  = 'ap-southeast-2'
+        AWS_DEFAULT_REGION  = 'us-east-1'
         EKS_CLUSTER_NAME    = 'challenge-eks-cluster'
     }
 
@@ -37,6 +37,7 @@ pipeline {
 
                         kubectl delete -f kubernetes/services/webapp-service.yaml || true
                         kubectl delete -f kubernetes/deployments/webapp-deployment.yaml || true
+                        kubectl delete -f kubernetes/deployments/cluster-admin-rolebinding.yaml' || true
 
                         // Helm chart cleanup
                         echo "🧹 Uninstalling Helm charts..."
@@ -61,7 +62,7 @@ pipeline {
                         sh '''
                         terraform init -backend-config="bucket=jeffmeager-challenge-terraform-state-bucket" \
                                         -backend-config="key=wiz-challenge/terraform.tfstate" \
-                                        -backend-config="region=${AWS_DEFAULT_REGION}"
+                                        -backend-config="region=ap-southeast-2"
                         '''           
                     }
                 }
@@ -71,8 +72,8 @@ pipeline {
         stage('Terraform Destroy') {
             steps {
                 withCredentials([
-                    string(credentialsId: 'mongo-db-username', variable: 'TF_VAR_mongo_db_username'),
-                    string(credentialsId: 'mongo-db-password', variable: 'TF_VAR_mongo_db_password'),
+                    string(credentialsId: 'mongodb-username', variable: 'TF_VAR_mongodb_username'),
+                    string(credentialsId: 'mongodb-password', variable: 'TF_VAR_mongodb_password'),
                     string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
                     string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
                 ]) {
@@ -94,13 +95,13 @@ pipeline {
                 ]) {
                     sh '''
                         aws secretsmanager delete-secret \
-                            --secret-id mongo-db-username \
+                            --secret-id mongodb-username \
                             --force-delete-without-recovery \
-                            --region ap-southeast-2
+                            --region ${AWS_DEFAULT_REGION}
                         aws secretsmanager delete-secret \
-                            --secret-id mongo-db-password \
+                            --secret-id mongodb-password \
                             --force-delete-without-recovery \
-                            --region ap-southeast-2
+                            --region ${AWS_DEFAULT_REGION}
                     '''
                 }
             }

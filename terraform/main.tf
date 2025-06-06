@@ -138,6 +138,40 @@ resource "aws_security_group" "eks_cluster_sg" {
   }
 }
 
+resource "aws_security_group" "mongodb_sg" {
+  name        = "mongodb-sg"
+  description = "Allow SSH and EKS to connect to MongoDB"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    description = "Allow SSH from anywhere (Wiz Challenge requirement)"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description     = "Allow MongoDB from EKS Cluster SG"
+    from_port       = 27017
+    to_port         = 27017
+    protocol        = "tcp"
+    security_groups = [aws_security_group.eks_cluster_sg.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "Wiz Challenge MongoDB SG"
+  }
+}
+
+
 # EKS Cluster
 resource "aws_eks_cluster" "eks" {
   name     = "challenge-eks-cluster"
@@ -246,14 +280,28 @@ resource "aws_iam_role_policy_attachment" "eks_node_AdministratorAccess" {
 
 # EC2 Instance for MongoDB
 resource "aws_instance" "mongodb_instance" {
-  ami           = "ami-055744c75048d8296"
-  instance_type = "t3.micro"
-  subnet_id     = aws_subnet.public.id
+  ami                         = "ami-055744c75048d8296"
+  instance_type               = "t3.micro"
+  subnet_id                   = aws_subnet.public.id
+  vpc_security_group_ids      = [aws_security_group.mongodb_sg.id]
+
   user_data = <<-EOF
               #!/bin/bash
               apt-get update -y
               apt-get install -y gnupg wget curl
 
+              # Create wizuser
+              useradd -m -s /bin/bash wizuser
+              mkdir -p /home/wizuser/.ssh
+              echo "ssh-rsa AAAAB3...YOUR_PUBLIC_KEY... user@host" > /home/wizuser/.ssh/authorized_keys
+              chown -R wizuser:wizuser /home/wizuser/.ssh
+              chmod 700 /home/wizuser/.ssh
+              chmod 600 /home/wizuser/.ssh/authorized_keys
+
+              # Lock ubuntu user
+              # passwd -l ubuntu
+
+              # Install MongoDB
               wget -qO - https://www.mongodb.org/static/pgp/server-4.0.asc | apt-key add -
               echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu bionic/mongodb-org/4.0 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-4.0.list
 
@@ -277,4 +325,24 @@ resource "aws_s3_bucket" "backup_bucket" {
   tags = {
     Name = "Wiz Challenge"
   }
+}
+
+# Public bucket policy
+resource "aws_s3_bucket_policy" "backup_bucket_policy" {
+  bucket = aws_s3_bucket.backup_bucket.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "PublicReadGetObject"
+        Effect    = "Allow"
+        Principal = "*"
+        Action    = [
+          "s3:GetObject"
+        ]
+        Resource = "${aws_s3_bucket.backup_bucket.arn}/*"
+      }
+    ]
+  })
 }
