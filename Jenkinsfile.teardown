@@ -68,7 +68,7 @@ pipeline {
                                     terraform destroy -auto-approve \
                                         -var region=${AWS_DEFAULT_REGION} \
                                         -var build_id="noop" \
-                                        -var admin_role_arns="[\"${ADMIN_ROLE_ARN}\"]"
+                                        -var admin_role_arn="${ADMIN_ROLE_ARN}"
                                 '''
                             }
                         }
