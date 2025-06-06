@@ -19,8 +19,8 @@ pipeline {
                 withCredentials([
                     string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
                     string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY'),
-                    string(credentialsId: 'rds-db-username', variable: 'TF_VAR_db_username'),
-                    string(credentialsId: 'rds-db-password', variable: 'TF_VAR_db_password')
+                    string(credentialsId: 'mongo-db-username', variable: 'TF_VAR_mongo_db_username'),
+                    string(credentialsId: 'mongo-db-password', variable: 'TF_VAR_mongo_db_password')
                 ]) {
                     dir('terraform') {
                         sh '''
@@ -33,7 +33,7 @@ pipeline {
                               -var="region=${AWS_DEFAULT_REGION}"
                         '''
                     }
-
+                    // refresh kubeconfig to use the new EKS cluster
                     sh '''
                         echo "🔧 Updating kubeconfig..."
                         aws eks --region ${AWS_DEFAULT_REGION} \
@@ -41,6 +41,23 @@ pipeline {
                           --name ${EKS_CLUSTER_NAME}
                     '''
 
+                    // Store initial MongoDB username password to AWS Secrets Manager
+                    sh '''
+                        aws secretsmanager create-secret \
+                        --name mongo-db-password \
+                        --secret-string "$MONGO_PASS" \
+                        --region ap-southeast-2 || \
+                        aws secretsmanager put-secret-value \
+                        --secret-id mongo-db-password \
+                        --secret-string "$MONGO_PASS" \
+                        --region ap-southeast-2
+                    '''
+                    }
+
+                    // Apply Kubernetes manifests
+                    dir('kubernetes/deployments') {
+                        sh 'kubectl apply -f cluster-admin-rolebinding.yaml'
+                    
                     dir('kubernetes/deployments') {
                         sh 'kubectl apply -f webapp-deployment.yaml'
                     }

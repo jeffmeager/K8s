@@ -71,8 +71,8 @@ pipeline {
         stage('Terraform Destroy') {
             steps {
                 withCredentials([
-                    string(credentialsId: 'rds-db-username', variable: 'TF_VAR_db_username'),
-                    string(credentialsId: 'rds-db-password', variable: 'TF_VAR_db_password'),
+                    string(credentialsId: 'mongo-db-username', variable: 'TF_VAR_mongo_db_username'),
+                    string(credentialsId: 'mongo-db-password', variable: 'TF_VAR_mongo_db_password'),
                     string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
                     string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
                 ]) {
@@ -94,7 +94,11 @@ pipeline {
                 ]) {
                     sh '''
                         aws secretsmanager delete-secret \
-                            --secret-id wordpress-db-password \
+                            --secret-id mongo-db-username \
+                            --force-delete-without-recovery \
+                            --region ap-southeast-2
+                        aws secretsmanager delete-secret \
+                            --secret-id mongo-db-password \
                             --force-delete-without-recovery \
                             --region ap-southeast-2
                     '''
