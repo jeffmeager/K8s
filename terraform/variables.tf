@@ -9,13 +9,12 @@ variable "kubeconfig_path" {
   default = "~/.kube/config"
 }
 
-variable "mongo_db_username" {
+variable "mongodb_username" {
   type        = string
   description = "MongoDB admin username"
-  default     = "wizuser"
 }
 
-variable "mongo_db_password" {
+variable "mongodb_password" {
   type        = string
   description = "MongoDB admin password"
   sensitive   = true
