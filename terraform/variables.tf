@@ -35,6 +35,6 @@ variable "build_id" {
 variable "admin_role_arns" {
   type        = list(string)
   description = "Admin IAM Role ARNs for EKS access"
-  default     = "noop"
+  default     = []
   sensitive   = true
 }
