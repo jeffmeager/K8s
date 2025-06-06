@@ -1,4 +1,7 @@
 resource "kubernetes_config_map" "aws_auth" {
+  count      = var.enable_aws_auth ? 1 : 0
+  depends_on = [aws_eks_node_group.node]
+
   metadata {
     name      = "aws-auth"
     namespace = "kube-system"

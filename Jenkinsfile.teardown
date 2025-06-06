@@ -78,10 +78,13 @@ pipeline {
                     string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
                 ]) {
                         dir('terraform') {
-                            sh '''
+                            sh """
                                 terraform destroy -auto-approve \
-                                -var="region=${AWS_DEFAULT_REGION}"
-                            '''
+                                    -var region=${AWS_DEFAULT_REGION} \
+                                    -var build_id="noop" \
+                                    -var admin_role_arns="[\"${ADMIN_ROLE_ARN}\"]" \
+                                    -var enable_aws_auth=true
+                            """
                         }
                 }
             }       
