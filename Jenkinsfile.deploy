@@ -59,27 +59,6 @@ pipeline {
                             --dry-run=client -o yaml | kubectl apply -f -
                     '''
 
-                    // Apply Kubernetes manifests
-                    dir('kubernetes/deployments') {
-                        sh '''
-                            set -o errexit -o pipefail -o nounset
-                            kubectl apply -f cluster-admin-rolebinding.yaml
-                        '''
-                    }
-                    dir('kubernetes/deployments') {
-                        sh '''
-                            set -o errexit -o pipefail -o nounset
-                            kubectl apply -f mongodb-deployment.yaml
-                        '''
-                    }
-
-                    dir('kubernetes/services') {
-                        sh '''
-                            set -o errexit -o pipefail -o nounset
-                            kubectl apply -f mongodb-service.yaml
-                        '''
-                    }
-
                     sh '''
                         echo "📦 Adding Helm repos..."
                         set -o errexit -o pipefail -o nounset
@@ -113,6 +92,26 @@ pipeline {
                             echo "✅ AWS Provider already installed. Skipping."
                         fi
                     '''
+                    // Apply Kubernetes manifests
+                    dir('kubernetes/deployments') {
+                        sh '''
+                            set -o errexit -o pipefail -o nounset
+                            kubectl apply -f cluster-admin-rolebinding.yaml
+                        '''
+                    }
+                    dir('kubernetes/deployments') {
+                        sh '''
+                            set -o errexit -o pipefail -o nounset
+                            kubectl apply -f webapp-deployment.yaml
+                        '''
+                    }
+
+                    dir('kubernetes/services') {
+                        sh '''
+                            set -o errexit -o pipefail -o nounset
+                            kubectl apply -f webapp-service.yaml
+                        '''
+                    }
                 }
             }
         }
