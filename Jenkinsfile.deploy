@@ -24,18 +24,21 @@ pipeline {
                     usernamePassword(credentialsId: 'Github_PAT', usernameVariable: 'github_username', passwordVariable: 'github_pat')
                 ]) {
                     dir('terraform') {
-                        def BUILD_TIMESTAMP = new Date().format('yyyyMMddHHmmss')
-                        sh """
-                            set -o errexit -o pipefail -o nounset
-                            terraform init \
-                              -backend-config="bucket=jeffmeager-challenge-terraform-state-bucket" \
-                              -backend-config="key=wiz-challenge/terraform.tfstate" \
-                              -backend-config="region=ap-southeast-2" \
+                        script {
+                            def BUILD_TIMESTAMP = new Date().format('yyyyMMddHHmmss')
+                            // Ensure Terraform is initialized with the correct backend
+                            sh """
+                                set -o errexit -o pipefail -o nounset
+                                terraform init \
+                                -backend-config="bucket=jeffmeager-challenge-terraform-state-bucket" \
+                                -backend-config="key=wiz-challenge/terraform.tfstate" \
+                                -backend-config="region=ap-southeast-2" \
 
-                            terraform apply -auto-approve \
-                                -var="region=${AWS_DEFAULT_REGION}" \
-                                -var="build_id=${BUILD_TIMESTAMP}"
-                        """
+                                terraform apply -auto-approve \
+                                    -var="region=${AWS_DEFAULT_REGION}" \
+                                    -var="build_id=${BUILD_TIMESTAMP}"
+                            """
+                        }     
                     }
                     // refresh kubeconfig to use the new EKS cluster
                     sh '''
