@@ -1,5 +1,5 @@
 resource "aws_secretsmanager_secret" "mongodb_username" {
-  name        = "mongodb_username"
+  name        = "mongodb_username-${var.build_id}"
   description = "MongoDB admin username"
 }
 
@@ -9,7 +9,7 @@ resource "aws_secretsmanager_secret_version" "mongodb_username_version" {
 }
 
 resource "aws_secretsmanager_secret" "mongodb_password" {
-  name        = "mongodb_password"
+  name        = "mongodb_password-${var.build_id}"
   description = "MongoDB admin password"
 }
 

@@ -31,8 +31,10 @@ pipeline {
                               -backend-config="key=wiz-challenge/terraform.tfstate" \
                               -backend-config="region=ap-southeast-2" \
 
+                            def BUILD_TIMESTAMP = new Date().format('yyyyMMddHHmmss')
                             terraform apply -auto-approve \
-                              -var="region=${AWS_DEFAULT_REGION}"
+                                -var="region=${AWS_DEFAULT_REGION}" \
+                                -var="build_id=${BUILD_TIMESTAMP}"
                         '''
                     }
                     // refresh kubeconfig to use the new EKS cluster

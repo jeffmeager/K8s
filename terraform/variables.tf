@@ -19,3 +19,8 @@ variable "mongodb_password" {
   description = "MongoDB admin password"
   sensitive   = true
 }
+
+variable "build_id" {
+  type        = string
+  description = "Build identifier for unique secret naming"
+}
