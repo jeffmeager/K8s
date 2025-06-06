@@ -64,7 +64,7 @@ pipeline {
                         set -o errexit -o pipefail -o nounset
                         kubectl create secret docker-registry ghcr-pull-secret \
                             --docker-server=ghcr.io \
-                            --docker-username=$jeffmeager \
+                            --docker-username="jeffmeager" \
                             --docker-password=$github_token \
                             --docker-email=your-email@example.com \
                             --dry-run=client -o yaml | kubectl apply -f -
