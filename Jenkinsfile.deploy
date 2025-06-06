@@ -8,122 +8,60 @@ pipeline {
     }
 
     stages {
-        stage('Checkout') {
-            steps {
-                git url: 'https://github.com/jeffmeager/K8s.git', branch: 'main'
-            }
-        }
-
-        stage('Terraform & Deploy') {
+        stage('Teardown Pipeline') {
             steps {
                 withCredentials([
                     string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
                     string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY'),
-                    string(credentialsId: 'mongodb-username', variable: 'TF_VAR_mongodb_username'),
-                    string(credentialsId: 'mongodb-password', variable: 'TF_VAR_mongodb_password'),
-                    string(credentialsId: 'github_token', variable: 'TF_VAR_github_token'),
-                    string(credentialsId: 'github_token', variable: 'github_token'),
                     string(credentialsId: 'jeff.meager.net_admin_arn', variable: 'ADMIN_ROLE_ARN')
-                    
                 ]) {
-                    dir('terraform') {
-                        script {
-                            def BUILD_TIMESTAMP = new Date().format('yyyyMMddHHmmss')
-                            // Ensure Terraform is initialized with the correct backend
-                            sh """
-                                set -o errexit -o pipefail -o nounset
-                                terraform init \
-                                -backend-config="bucket=jeffmeager-challenge-terraform-state-bucket" \
-                                -backend-config="key=wiz-challenge/terraform.tfstate" \
-                                -backend-config="region=ap-southeast-2" \
-
-                                terraform apply -auto-approve \
-                                    -var="region=${AWS_DEFAULT_REGION}" \
-                                    -var="build_id=${BUILD_TIMESTAMP}" \
-                                    -var="admin_role_arns=[\\"${ADMIN_ROLE_ARN}\\"]"
-                            """
-                        }     
-                    }
-                    // refresh kubeconfig to use the new EKS cluster
-                    sh '''
-                        set -o errexit -o pipefail -o nounset
-                        echo "🔧 Updating kubeconfig..."
-                        aws eks --region ${AWS_DEFAULT_REGION} \
-                          update-kubeconfig \
-                          --name ${EKS_CLUSTER_NAME}
-                    '''
-                    
-                    //Wait for nodes ready (prevents race conditions)
-                    sh '''
-                        set -o errexit -o pipefail -o nounset
-                        echo "⏳ Waiting for EKS nodes to be Ready..."
-                        kubectl wait --for=condition=Ready node --all --timeout=120s
-
-                    '''
-                    
-                    // Add PAT secret to call private repo
-                    sh '''
-                        set -o errexit -o pipefail -o nounset
-                        kubectl create secret docker-registry ghcr-pull-secret \
-                            --docker-server=ghcr.io \
-                            --docker-username="jeffmeager" \
-                            --docker-password=$github_token \
-                            --docker-email=your-email@example.com \
-                            --dry-run=client -o yaml | kubectl apply -f -
-                    '''
-
-                    sh '''
-                        echo "📦 Adding Helm repos..."
-                        set -o errexit -o pipefail -o nounset
-                        helm repo add secrets-store-csi-driver https://kubernetes-sigs.github.io/secrets-store-csi-driver/charts || true
-                        helm repo add aws-secrets-provider https://aws.github.io/secrets-store-csi-driver-provider-aws || true
-                        helm repo update
-
-                        echo "🔍 Checking if CSI Driver is already installed..."
-                        if ! helm status csi-secrets-store -n kube-system > /dev/null 2>&1; then
-                            echo "🚀 Installing CSI Driver..."
-                            helm install csi-secrets-store secrets-store-csi-driver/secrets-store-csi-driver \
-                            --namespace kube-system \
-                            --version 1.3.4 \
-                            --create-namespace \
-                            --wait \
-                            --set syncSecret.enabled=true \
-                            --set enableSecretRotation=true \
-                            --set enableCSIStorageCapacity=true
-                        else
-                            echo "✅ CSI Driver already installed. Skipping."
-                        fi
-
-                        echo "🔍 Checking if AWS Provider is already installed..."
-                        if ! helm status secrets-store-csi-driver-provider-aws -n kube-system > /dev/null 2>&1; then
-                            echo "🔐 Installing AWS Provider..."
-                            helm install secrets-store-csi-driver-provider-aws aws-secrets-provider/secrets-store-csi-driver-provider-aws \
-                            --namespace kube-system \
-                            --version 0.2.0 \
-                            --wait
-                        else
-                            echo "✅ AWS Provider already installed. Skipping."
-                        fi
-                    '''
-                    // Apply Kubernetes manifests
-                    dir('kubernetes/deployments') {
+                    script {
+                        // Sub-stage 1: Configure kubectl and delete helm and app
                         sh '''
-                            set -o errexit -o pipefail -o nounset
-                            kubectl apply -f cluster-admin-rolebinding.yaml
-                        '''
-                    }
-                    dir('kubernetes/deployments') {
-                        sh '''
-                            set -o errexit -o pipefail -o nounset
-                            kubectl apply -f webapp-deployment.yaml
-                        '''
-                    }
+                            echo "🔍 Checking if EKS cluster '${EKS_CLUSTER_NAME}' exists..."
+                            if aws eks describe-cluster --name ${EKS_CLUSTER_NAME} --region ${AWS_DEFAULT_REGION} --profile ${AWS_PROFILE} >/dev/null 2>&1; then
+                                echo "✅ Cluster found. Updating kubeconfig..."
+                                aws eks update-kubeconfig \
+                                    --name ${EKS_CLUSTER_NAME} \
+                                    --region ${AWS_DEFAULT_REGION} \
+                                    --profile ${AWS_PROFILE}
 
-                    dir('kubernetes/services') {
-                        sh '''
-                            set -o errexit -o pipefail -o nounset
-                            kubectl apply -f webapp-service.yaml
+                                kubectl delete -f kubernetes/services/webapp-service.yaml || true
+                                kubectl delete -f kubernetes/deployments/webapp-deployment.yaml || true
+                                kubectl delete -f kubernetes/deployments/cluster-admin-rolebinding.yaml || true
+
+                                echo "🧹 Uninstalling Helm charts..."
+                                helm uninstall csi-secrets-store -n kube-system || true
+                                helm uninstall secrets-store-csi-driver-provider-aws -n kube-system || true
+                            else
+                                echo "⚠️ Cluster '${EKS_CLUSTER_NAME}' not found. Skipping kubeconfig update."
+                            fi
                         '''
+
+                        // Sub-stage 2: Terraform Init
+                        dir('terraform') {
+                            sh '''
+                                terraform init -backend-config="bucket=jeffmeager-challenge-terraform-state-bucket" \
+                                                -backend-config="key=wiz-challenge/terraform.tfstate" \
+                                                -backend-config="region=ap-southeast-2"
+                            '''
+                        }
+
+                        // Sub-stage 3: Terraform Destroy
+                        withCredentials([
+                            string(credentialsId: 'mongodb-username', variable: 'TF_VAR_mongodb_username'),
+                            string(credentialsId: 'mongodb-password', variable: 'TF_VAR_mongodb_password')
+                        ]) {
+                            dir('terraform') {
+                                sh '''
+                                    terraform destroy -auto-approve \
+                                        -var region=${AWS_DEFAULT_REGION} \
+                                        -var build_id="noop" \
+                                        -var admin_role_arns="[\"${ADMIN_ROLE_ARN}\"]" \
+                                        -var enable_aws_auth=true
+                                '''
+                            }
+                        }
                     }
                 }
             }
@@ -132,10 +70,10 @@ pipeline {
 
     post {
         success {
-            echo '🚀 Infrastructure and workloads successfully deployed'
+            echo '🧹 Infrastructure and workloads successfully cleaned up'
         }
         failure {
-            echo '⚠️ Deployment encountered issues'
+            echo '⚠️ Something went wrong while tearing down'
         }
     }
 }
