@@ -57,7 +57,8 @@ pipeline {
             steps {
                 withCredentials([
                     string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
-                    string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY') 
+                    string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY'),
+                    string(credentialsId: 'jeff.meager.net_admin_arn', variable: 'ADMIN_ROLE_ARN')  
                 ]) {    
                     dir('terraform') {
                         sh '''
@@ -76,7 +77,8 @@ pipeline {
                     string(credentialsId: 'mongodb-username', variable: 'TF_VAR_mongodb_username'),
                     string(credentialsId: 'mongodb-password', variable: 'TF_VAR_mongodb_password'),
                     string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
-                    string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
+                    string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY'),
+                    string(credentialsId: 'jeff.meager.net_admin_arn', variable: 'ADMIN_ROLE_ARN') 
                 ]) {
                         dir('terraform') {
                             sh """
