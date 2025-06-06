@@ -37,9 +37,9 @@ pipeline {
 
                         kubectl delete -f kubernetes/services/webapp-service.yaml || true
                         kubectl delete -f kubernetes/deployments/webapp-deployment.yaml || true
-                        kubectl delete -f kubernetes/deployments/cluster-admin-rolebinding.yaml' || true
+                        kubectl delete -f kubernetes/deployments/cluster-admin-rolebinding.yaml || true
 
-                        // Helm chart cleanup
+                        # Helm chart cleanup
                         echo "🧹 Uninstalling Helm charts..."
                         helm uninstall csi-secrets-store -n kube-system || true
                         helm uninstall secrets-store-csi-driver-provider-aws -n kube-system || true
