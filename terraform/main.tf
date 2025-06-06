@@ -213,11 +213,6 @@ resource "aws_instance" "mongodb_instance" {
   ami           = aws.ami.ubuntu_1604.id
   instance_type = "t2.micro"
   subnet_id     = aws_subnet.public.id
-  user_data     = <<-EOF
-              #!/bin/bash
-              apt-get update -y
-              apt-get install -y mongodb
-              EOF
   user_data = <<-EOF
               #!/bin/bash
               apt-get update -y
