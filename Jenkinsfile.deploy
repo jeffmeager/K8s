@@ -22,7 +22,7 @@ pipeline {
                     string(credentialsId: 'mongodb-username', variable: 'TF_VAR_mongodb_username'),
                     string(credentialsId: 'mongodb-password', variable: 'TF_VAR_mongodb_password'),
                     usernamePassword(credentialsId: 'Github_PAT', usernameVariable: 'github_username', passwordVariable: 'github_pat'),
-                    string(credentialsId: 'jeff.meager_admin_arn', variable: 'ADMIN_ROLE_ARN')
+                    string(credentialsId: 'jeff.meager.net_admin_arn', variable: 'ADMIN_ROLE_ARN')
                 ]) {
                     dir('terraform') {
                         script {
