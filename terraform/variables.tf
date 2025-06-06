@@ -31,7 +31,7 @@ variable "build_id" {
   default     = "noop"
 }
 
-variable "admin_role_arns" {
+variable "admin_role_arn" {
   type        = string
   description = "Admin IAM Role ARNs for EKS access"
   default     = "noop"
