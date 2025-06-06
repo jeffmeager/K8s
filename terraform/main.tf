@@ -70,12 +70,9 @@ resource "aws_route_table_association" "a" {
   route_table_id = aws_route_table.public.id
 }
 
-
-
-
 # Elastic IP for NAT Gateway
 resource "aws_eip" "nat_eip" {
-  vpc = true
+  domain ="vpc"
   tags = {
     Name = "Wiz Challenge NAT EIP"
   }

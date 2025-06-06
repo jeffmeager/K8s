@@ -23,6 +23,11 @@ resource "random_password" "secret_key" {
   special = false
 }
 
+resource "aws_secretsmanager_secret" "webapp_secrets" {
+  name        = "webapp-secrets"
+  description = "Secrets for WebApp (MONGODB_URI and SECRET_KEY)"
+}
+
 resource "aws_secretsmanager_secret_version" "webapp_secrets_version" {
   secret_id = aws_secretsmanager_secret.webapp_secrets.id
 
