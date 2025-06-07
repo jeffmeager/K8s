@@ -1,5 +1,5 @@
 resource "aws_secretsmanager_secret" "mongodb_username" {
-  name        = "mongodb_username-${var.build_id}"
+  name        = "mongodb_username-${var.build_timestamp}"
   description = "MongoDB admin username"
 }
 
@@ -9,7 +9,7 @@ resource "aws_secretsmanager_secret_version" "mongodb_username_version" {
 }
 
 resource "aws_secretsmanager_secret" "mongodb_password" {
-  name        = "mongodb_password-${var.build_id}"
+  name        = "mongodb_password-${var.build_timestamp}"
   description = "MongoDB admin password"
 }
 
@@ -24,7 +24,7 @@ resource "random_password" "secret_key" {
 }
 
 resource "aws_secretsmanager_secret" "webapp_secrets" {
-  name        = "webapp-secrets"
+  name = "webapp-secrets-${var.build_timestamp}"
   description = "Secrets for WebApp (MONGODB_URI and SECRET_KEY)"
 }
 

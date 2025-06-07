@@ -25,7 +25,7 @@ variable "mongodb_password" {
   sensitive   = true
 }
 
-variable "build_id" {
+variable "build_timestamp" {
   type        = string
   description = "Build identifier for unique secret naming"
   default     = "noop"

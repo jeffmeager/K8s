@@ -34,11 +34,11 @@ pipeline {
                                 terraform init \
                                 -backend-config="bucket=jeffmeager-challenge-terraform-state-bucket" \
                                 -backend-config="key=wiz-challenge/terraform.tfstate" \
-                                -backend-config="region=ap-southeast-2" \
+                                -backend-config="region=ap-southeast-2"
 
                                 terraform apply -auto-approve \
                                     -var="region=${AWS_DEFAULT_REGION}" \
-                                    -var="build_id=${BUILD_TIMESTAMP}" \
+                                    -var="build_timestamp=${BUILD_TIMESTAMP}" \
                                     -var admin_role_arn="${ADMIN_ROLE_ARN}"
                             """
                         }     
