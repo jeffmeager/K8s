@@ -94,9 +94,7 @@ pipeline {
                                 fi
                             fi
                         '''
-                        }
-
-
+                        
 
                         // Sub-stage 3: Terraform Init
                         dir('terraform') {
