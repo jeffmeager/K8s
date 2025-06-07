@@ -54,7 +54,7 @@ pipeline {
                                         aws elb delete-load-balancer --region us-east-1 --load-balancer-name "$ELB_NAME"
 
                                         echo "⏳ Waiting for ELB $ELB_NAME to be deleted..."
-                                        while aws elb describe-load-balancers --region us-east-1 --load-balancer-names "$ELB_NAME" 2>&1 | grep -q "$ELB_NAME"; do
+                                        while aws elb describe-load-balancers --region us-east-1 --load-balancer-names "$ELB_NAME" >/dev/null 2>&1; do
                                             echo "Still waiting for ELB $ELB_NAME to be deleted..."
                                             sleep 10
                                         done
