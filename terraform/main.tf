@@ -319,15 +319,13 @@ resource "aws_s3_bucket" "backup_bucket" {
 }
 
 resource "aws_s3_bucket_public_access_block" "block_public_access" {
-  bucket = aws_s3_bucket.challenge_docker_backups.id
+  bucket = aws_s3_bucket.backup_bucket.id
 
   block_public_acls       = false
   block_public_policy     = false
   ignore_public_acls      = false
   restrict_public_buckets = false
 }
-
-
 
 # Public bucket policy
 resource "aws_s3_bucket_policy" "backup_bucket_policy" {
