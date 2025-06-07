@@ -64,7 +64,39 @@ pipeline {
                             done
 
                             echo "✅ ELB cleanup complete."
+                        
+                            echo "🔍 Looking up VPC ID for SG cleanup..."
+
+                            # Lookup VPC ID by tag Name=Wiz Challenge
+                            VPC_ID=$(aws ec2 describe-vpcs --region us-east-1 \
+                                --filters Name=tag:Name,Values='Wiz Challenge' \
+                                --query "Vpcs[0].VpcId" --output text)
+
+                            if [ -z "$VPC_ID" ] || [ "$VPC_ID" = "None" ]; then
+                                echo "❌ Could not determine VPC ID — skipping SG cleanup."
+                            else
+                                echo "✅ VPC ID is $VPC_ID"
+                                echo "🔍 Looking for orphaned Kubernetes ELB security groups in VPC $VPC_ID..."
+
+                                SG_IDS=$(aws ec2 describe-security-groups --region us-east-1 \
+                                    --filters Name=vpc-id,Values=$VPC_ID \
+                                            Name-group-name,Values="*k8s-elb-*" \
+                                    --query "SecurityGroups[?GroupName!='default'].GroupId" --output text)
+
+                                if [ -z "$SG_IDS" ]; then
+                                    echo "✅ No orphaned Kubernetes ELB security groups found."
+                                else
+                                    for SG_ID in $SG_IDS; do
+                                        echo "🗑️ Deleting orphaned Kubernetes ELB security group: $SG_ID"
+                                        aws ec2 delete-security-group --region us-east-1 --group-id "$SG_ID" || echo "⚠️ Could not delete SG $SG_ID — may still be in use."
+                                    done
+                                    echo "✅ Security group cleanup complete."
+                                fi
+                            fi
                         '''
+                        }
+
+
 
                         // Sub-stage 3: Terraform Init
                         dir('terraform') {
