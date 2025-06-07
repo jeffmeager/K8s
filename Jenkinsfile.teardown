@@ -80,7 +80,7 @@ pipeline {
 
                                 SG_IDS=$(aws ec2 describe-security-groups --region us-east-1 \
                                     --filters Name=vpc-id,Values=$VPC_ID \
-                                            Name-group-name,Values="*k8s-elb-*" \
+                                            Name=group-name,Values="*k8s-elb-*" \
                                     --query "SecurityGroups[?GroupName!='default'].GroupId" --output text)
 
                                 if [ -z "$SG_IDS" ]; then
