@@ -1,7 +1,7 @@
 locals {
   aws_auth_yaml = templatefile("${path.module}/../kubernetes/deployments/aws-auth.yaml.tpl", {
-    node_role_arn   = aws_eks_node_group.node.node_role_arn
-    admin_role_arn  = var.admin_role_arn  # use singular
+    node_role_arn      = aws_eks_node_group.node.node_role_arn
+    eks_admin_role_arn = aws_iam_role.eks_admin_role.arn
   })
 }
 

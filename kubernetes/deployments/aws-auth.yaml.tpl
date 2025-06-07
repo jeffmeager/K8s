@@ -10,7 +10,7 @@ data:
       groups:
         - system:bootstrappers
         - system:nodes
-    - rolearn: ${admin_role_arn}
-      username: admin
+    - rolearn: ${eks_admin_role_arn}
+      username: eks-admin
       groups:
         - system:masters
