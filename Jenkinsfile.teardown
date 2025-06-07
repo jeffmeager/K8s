@@ -1,14 +1,3 @@
-// This Jenkinsfile is designed to tear down the infrastructure and workloads created in the previous stages.
-// It includes stages to configure kubectl, delete the web application, initialize Terraform, and destroy the infrastructure.
-// The post section provides feedback on the success or failure of the teardown process.
-// The use of `withCredentials` ensures that sensitive information like database credentials are handled securely.
-// The script uses `|| true` to ignore errors when deleting resources that may not exist, allowing the pipeline to continue smoothly.
-// The `terraform init` command is configured to use a specific S3 bucket for state management, ensuring that the state is consistent across runs.
-// The `terraform destroy` command is used to clean up all resources created by Terraform, ensuring that the environment is returned to a clean state.
-// The pipeline is structured to run on any available agent, making it flexible for different Jenkins environments.
-// The environment variables are set to ensure that the correct AWS profile and region are used throughout the pipeline.
-
-
 pipeline {
     agent any
 
@@ -27,41 +16,17 @@ pipeline {
                     string(credentialsId: 'jeff.meager.net_admin_arn', variable: 'ADMIN_ROLE_ARN')
                 ]) {
                     script {
-                        // Sub-stage 1: Configure kubectl and delete helm and app
+                        // Sub-stage 1: Conditional kubectl cleanup if cluster exists
                         sh '''
                             echo "🔍 Checking if EKS cluster '${EKS_CLUSTER_NAME}' exists..."
-                            if aws eks describe-cluster --name ${EKS_CLUSTER_NAME} --region ${AWS_DEFAULT_REGION} --profile ${AWS_PROFILE} >/dev/null 2>&1; then
+                            if aws eks describe-cluster --name ${EKS_CLUSTER_NAME} --region ${AWS_DEFAULT_REGION} >/dev/null 2>&1; then
                                 echo "✅ Cluster found. Updating kubeconfig..."
                                 aws eks update-kubeconfig \
                                     --name ${EKS_CLUSTER_NAME} \
                                     --region ${AWS_DEFAULT_REGION}
 
+                                echo "✅ Running Kubernetes deletes..."
                                 kubectl delete -f kubernetes/services/webapp-service.yaml || true
-
-                                echo "🔍 Looking for Classic ELB tagged by Kubernetes for webapp-service..."
-                                # Get all Classic ELB names
-                                for ELB_NAME in $(aws elb describe-load-balancers --region us-east-1 --query "LoadBalancerDescriptions[].LoadBalancerName" --output text); do
-                                    echo "Checking ELB: $ELB_NAME"
-                                    TAGS=$(aws elb describe-tags --region us-east-1 --load-balancer-names "$ELB_NAME" --query "TagDescriptions[].Tags" --output json)
-
-                                    # Look for tag "kubernetes.io/service-name" == "default/webapp-service"
-                                    if echo "$TAGS" | grep -q '"Key": "kubernetes.io/service-name"'; then
-                                        if echo "$TAGS" | grep -q '"Value": "default/webapp-service"'; then
-                                            echo "✅ Found matching ELB: $ELB_NAME — deleting it..."
-                                            aws elb delete-load-balancer --region us-east-1 --load-balancer-name "$ELB_NAME"
-
-                                            echo "⏳ Waiting for ELB $ELB_NAME to be deleted..."
-                                            while aws elb describe-load-balancers --region us-east-1 --load-balancer-names "$ELB_NAME" 2>&1 | grep -q "$ELB_NAME"; do
-                                                echo "Still waiting for ELB $ELB_NAME to be deleted..."
-                                                sleep 10
-                                            done
-                                            echo "🎉 ELB $ELB_NAME deleted."
-                                        fi
-                                    fi
-                                done
-
-                                echo "✅ ELB cleanup complete."
-
                                 kubectl delete -f kubernetes/deployments/webapp-deployment.yaml || true
                                 kubectl delete -f kubernetes/deployments/cluster-admin-rolebinding.yaml || true
 
@@ -69,11 +34,39 @@ pipeline {
                                 helm uninstall csi-secrets-store -n kube-system || true
                                 helm uninstall secrets-store-csi-driver-provider-aws -n kube-system || true
                             else
-                                echo "⚠️ Cluster '${EKS_CLUSTER_NAME}' not found. Skipping kubeconfig update."
+                                echo "⚠️ Cluster '${EKS_CLUSTER_NAME}' not found. Skipping kubeconfig and Kubernetes deletes."
                             fi
                         '''
 
-                        // Sub-stage 2: Terraform Init
+                        // Sub-stage 2: Always run ELB cleanup (even if cluster is gone)
+                        sh '''
+                            echo "🔍 Looking for Classic ELB tagged by Kubernetes for webapp-service..."
+
+                            # Get all Classic ELB names
+                            for ELB_NAME in $(aws elb describe-load-balancers --region us-east-1 --query "LoadBalancerDescriptions[].LoadBalancerName" --output text); do
+                                echo "Checking ELB: $ELB_NAME"
+                                TAGS=$(aws elb describe-tags --region us-east-1 --load-balancer-names "$ELB_NAME" --query "TagDescriptions[].Tags" --output json)
+
+                                # Look for tag "kubernetes.io/service-name" == "default/webapp-service"
+                                if echo "$TAGS" | grep -q '"Key": "kubernetes.io/service-name"'; then
+                                    if echo "$TAGS" | grep -q '"Value": "default/webapp-service"'; then
+                                        echo "✅ Found matching ELB: $ELB_NAME — deleting it..."
+                                        aws elb delete-load-balancer --region us-east-1 --load-balancer-name "$ELB_NAME"
+
+                                        echo "⏳ Waiting for ELB $ELB_NAME to be deleted..."
+                                        while aws elb describe-load-balancers --region us-east-1 --load-balancer-names "$ELB_NAME" 2>&1 | grep -q "$ELB_NAME"; do
+                                            echo "Still waiting for ELB $ELB_NAME to be deleted..."
+                                            sleep 10
+                                        done
+                                        echo "🎉 ELB $ELB_NAME deleted."
+                                    fi
+                                fi
+                            done
+
+                            echo "✅ ELB cleanup complete."
+                        '''
+
+                        // Sub-stage 3: Terraform Init
                         dir('terraform') {
                             sh '''
                                 terraform init -backend-config="bucket=jeffmeager-challenge-terraform-state-bucket" \
@@ -82,7 +75,7 @@ pipeline {
                             '''
                         }
 
-                        // Sub-stage 3: Terraform Destroy
+                        // Sub-stage 4: Terraform Destroy
                         withCredentials([
                             string(credentialsId: 'mongodb-username', variable: 'TF_VAR_mongodb_username'),
                             string(credentialsId: 'mongodb-password', variable: 'TF_VAR_mongodb_password'),
