@@ -37,6 +37,31 @@ pipeline {
                                     --region ${AWS_DEFAULT_REGION}
 
                                 kubectl delete -f kubernetes/services/webapp-service.yaml || true
+
+                                echo "🔍 Looking for Classic ELB tagged by Kubernetes for webapp-service..."
+                                # Get all Classic ELB names
+                                for ELB_NAME in $(aws elb describe-load-balancers --region us-east-1 --query "LoadBalancerDescriptions[].LoadBalancerName" --output text); do
+                                    echo "Checking ELB: $ELB_NAME"
+                                    TAGS=$(aws elb describe-tags --region us-east-1 --load-balancer-names "$ELB_NAME" --query "TagDescriptions[].Tags" --output json)
+
+                                    # Look for tag "kubernetes.io/service-name" == "default/webapp-service"
+                                    if echo "$TAGS" | grep -q '"Key": "kubernetes.io/service-name"'; then
+                                        if echo "$TAGS" | grep -q '"Value": "default/webapp-service"'; then
+                                            echo "✅ Found matching ELB: $ELB_NAME — deleting it..."
+                                            aws elb delete-load-balancer --region us-east-1 --load-balancer-name "$ELB_NAME"
+
+                                            echo "⏳ Waiting for ELB $ELB_NAME to be deleted..."
+                                            while aws elb describe-load-balancers --region us-east-1 --load-balancer-names "$ELB_NAME" 2>&1 | grep -q "$ELB_NAME"; do
+                                                echo "Still waiting for ELB $ELB_NAME to be deleted..."
+                                                sleep 10
+                                            done
+                                            echo "🎉 ELB $ELB_NAME deleted."
+                                        fi
+                                    fi
+                                done
+
+                                echo "✅ ELB cleanup complete."
+
                                 kubectl delete -f kubernetes/deployments/webapp-deployment.yaml || true
                                 kubectl delete -f kubernetes/deployments/cluster-admin-rolebinding.yaml || true
 
