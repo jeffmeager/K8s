@@ -12,11 +12,33 @@ spec:
       labels:
         app: webapp
     spec:
+      serviceAccountName: webapp-sa   # <--- You need this to let pod read SecretsManager
       imagePullSecrets:
-      - name: ghcr-pull-secret
+        - name: ghcr-pull-secret
+      volumes:
+        - name: secrets-store-inline
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: webapp-secrets
       containers:
-      - name: webapp
-        image: ghcr.io/jeffmeager/tasky:latest
-        ports:
-        - containerPort: 8080
-
+        - name: webapp
+          image: ghcr.io/jeffmeager/tasky:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: MONGODB_URI
+              valueFrom:
+                secretKeyRef:
+                  name: webapp-secrets-sync
+                  key: mongodb-uri
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: webapp-secrets-sync
+                  key: secret-key
+          volumeMounts:
+            - name: secrets-store-inline
+              mountPath: "/mnt/secrets-store"
+              readOnly: true
