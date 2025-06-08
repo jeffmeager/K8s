@@ -20,8 +20,28 @@ resource "aws_iam_role" "eks_admin_role" {
   }
 }
 
-# Attach AmazonEKSFullAccess policy to the EKS Admin Role
-resource "aws_iam_role_policy_attachment" "eks_admin_attach" {
+# Attach core EKS policies
+
+resource "aws_iam_role_policy_attachment" "eks_admin_cluster_policy_attach" {
   role       = aws_iam_role.eks_admin_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSFullAccess"
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
+}
+
+resource "aws_iam_role_policy_attachment" "eks_admin_service_policy_attach" {
+  role       = aws_iam_role.eks_admin_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSServicePolicy"
+}
+
+# Optional: CloudWatch Logs access for viewing EKS logs
+
+resource "aws_iam_role_policy_attachment" "eks_admin_cloudwatch_logs_attach" {
+  role       = aws_iam_role.eks_admin_role.name
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
+}
+
+# Optional: SSM Session Manager access to EKS nodes
+
+resource "aws_iam_role_policy_attachment" "eks_admin_ssm_attach" {
+  role       = aws_iam_role.eks_admin_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMFullAccess"
 }
