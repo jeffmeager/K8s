@@ -1,3 +1,4 @@
+# Define the EKS Admin Role
 resource "aws_iam_role" "eks_admin_role" {
   name = "eks-admin-role"
 
@@ -7,8 +8,7 @@ resource "aws_iam_role" "eks_admin_role" {
       {
         Effect = "Allow"
         Principal = {
-          # Initially allow AWS Account root — so you can assign SSO users/groups manually later
-          AWS = "arn:aws:iam::559050241687:root"
+          AWS = "arn:aws:iam::559050241687:user/Jeff"
         }
         Action = "sts:AssumeRole"
       }
@@ -18,4 +18,10 @@ resource "aws_iam_role" "eks_admin_role" {
   tags = {
     Name = "eks-admin-role"
   }
+}
+
+# Attach AmazonEKSFullAccess policy to the EKS Admin Role
+resource "aws_iam_role_policy_attachment" "eks_admin_attach" {
+  role       = aws_iam_role.eks_admin_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSFullAccess"
 }
