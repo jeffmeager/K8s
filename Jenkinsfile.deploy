@@ -16,6 +16,11 @@ pipeline {
 
         stage('Terraform & Deploy') {
             steps {
+                script {
+                    def BUILD_TIMESTAMP = new Date().format('yyyyMMddHHmmss')
+                    env.BUILD_TIMESTAMP = BUILD_TIMESTAMP  // export to env for all sh steps
+                }
+
                 withCredentials([
                     string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
                     string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY'),
@@ -26,23 +31,20 @@ pipeline {
                     string(credentialsId: 'jeff.meager.net_admin_arn', variable: 'ADMIN_ROLE_ARN')
                 ]) {
                     dir('terraform') {
-                        script {
-                            def BUILD_TIMESTAMP = new Date().format('yyyyMMddHHmmss')
-                            // Ensure Terraform is initialized with the correct backend
-                            sh """
-                                set -o errexit -o pipefail -o nounset
-                                terraform init \
-                                -backend-config="bucket=jeffmeager-challenge-terraform-state-bucket" \
-                                -backend-config="key=wiz-challenge/terraform.tfstate" \
-                                -backend-config="region=ap-southeast-2"
+                        sh """
+                            set -o errexit -o pipefail -o nounset
+                            terraform init \
+                            -backend-config="bucket=jeffmeager-challenge-terraform-state-bucket" \
+                            -backend-config="key=wiz-challenge/terraform.tfstate" \
+                            -backend-config="region=ap-southeast-2"
 
-                                terraform apply -auto-approve \
-                                    -var="region=${AWS_DEFAULT_REGION}" \
-                                    -var="build_timestamp=${BUILD_TIMESTAMP}" \
-                                    -var admin_role_arn="${ADMIN_ROLE_ARN}"
-                            """
-                        }     
+                            terraform apply -auto-approve \
+                                -var="region=${AWS_DEFAULT_REGION}" \
+                                -var="build_timestamp=${BUILD_TIMESTAMP}" \
+                                -var admin_role_arn="${ADMIN_ROLE_ARN}"
+                        """
                     }
+
                     // refresh kubeconfig to use the new EKS cluster
                     sh '''
                         set -o errexit -o pipefail -o nounset
@@ -51,15 +53,14 @@ pipeline {
                           update-kubeconfig \
                           --name ${EKS_CLUSTER_NAME}
                     '''
-                    
-                    //Wait for nodes ready (prevents race conditions)
+
+                    // Wait for nodes ready (prevents race conditions)
                     sh '''
                         set -o errexit -o pipefail -o nounset
                         echo "⏳ Waiting for EKS nodes to be Ready..."
                         kubectl wait --for=condition=Ready node --all --timeout=120s
-
                     '''
-                    
+
                     // Add PAT secret to call private repo
                     sh '''
                         set -o errexit -o pipefail -o nounset
@@ -71,6 +72,7 @@ pipeline {
                             --dry-run=client -o yaml | kubectl apply -f -
                     '''
 
+                    // Install CSI Driver and AWS Provider
                     sh '''
                         echo "📦 Adding Helm repos..."
                         set -o errexit -o pipefail -o nounset
@@ -104,6 +106,16 @@ pipeline {
                             echo "✅ AWS Provider already installed. Skipping."
                         fi
                     '''
+
+                    // Apply SecretProviderClass with current BUILD_TIMESTAMP
+                    dir('kubernetes/deployments') {
+                        sh """
+                            set -o errexit -o pipefail -o nounset
+                            echo "Applying SecretProviderClass with current BUILD_TIMESTAMP=${BUILD_TIMESTAMP}"
+                            envsubst < secretproviderclass-template.yaml | kubectl apply -f -
+                        """
+                    }
+
                     // Apply Kubernetes manifests
                     dir('kubernetes/deployments') {
                         sh '''
@@ -111,6 +123,7 @@ pipeline {
                             kubectl apply -f cluster-admin-rolebinding.yaml
                         '''
                     }
+
                     dir('kubernetes/deployments') {
                         sh '''
                             set -o errexit -o pipefail -o nounset
