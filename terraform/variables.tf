@@ -31,9 +31,9 @@ variable "build_timestamp" {
   default     = "noop"
 }
 
-variable "admin_role_arn" {
-  type        = string
-  description = "Admin IAM Role ARNs for EKS access"
-  default     = "noop"
-  sensitive   = true
-}
+# variable "admin_role_arn" {
+#   type        = string
+#   description = "Admin IAM Role ARNs for EKS access"
+#   default     = "noop"
+#   sensitive   = true
+# }

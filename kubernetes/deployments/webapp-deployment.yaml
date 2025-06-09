@@ -12,7 +12,7 @@ spec:
       labels:
         app: webapp
     spec:
-      serviceAccountName: webapp-sa   # <--- You need this to let pod read SecretsManager
+      serviceAccountName: webapp-sa   # Allows access to Secrets Manager
       imagePullSecrets:
         - name: ghcr-pull-secret
       volumes:

@@ -1,7 +1,7 @@
 terraform {
   backend "s3" {
     bucket         = "jeffmeager-challenge-terraform-state-bucket"
-    key            = "wiz-challenge/terraform.tfstate"
+    key            = "challenge/terraform.tfstate"
     region         = "ap-southeast-2"
     encrypt        = true
   }
@@ -11,7 +11,7 @@ terraform {
 resource "aws_vpc" "main" {
   cidr_block = "10.0.0.0/16"
   tags = {
-    Name = "Wiz Challenge"
+    Name = "Challenge"
   }
 }
 
@@ -22,7 +22,7 @@ resource "aws_subnet" "public" {
   availability_zone = "us-east-1a"
   map_public_ip_on_launch = true
   tags = {
-    Name = "Wiz Challenge"
+    Name = "Challenge"
   }
 }
 resource "aws_subnet" "private_az1" {
@@ -30,7 +30,7 @@ resource "aws_subnet" "private_az1" {
   cidr_block        = "10.0.2.0/24"
   availability_zone = "us-east-1a"
   tags = {
-    Name = "Wiz Challenge"
+    Name = "Challenge"
   }
 }
 
@@ -39,7 +39,7 @@ resource "aws_subnet" "private_az2" {
   cidr_block        = "10.0.3.0/24"
   availability_zone = "us-east-1b"
   tags = {
-    Name = "Wiz Challenge"
+    Name = "Challenge"
   }
 }
 
@@ -47,7 +47,7 @@ resource "aws_subnet" "private_az2" {
 resource "aws_internet_gateway" "gw" {
   vpc_id = aws_vpc.main.id
   tags = {
-    Name = "Wiz Challenge"
+    Name = "Challenge"
   }
 }
 
@@ -55,7 +55,7 @@ resource "aws_internet_gateway" "gw" {
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
   tags = {
-    Name = "Wiz Challenge"
+    Name = "Challenge"
   }
 
   route {
@@ -74,7 +74,7 @@ resource "aws_route_table_association" "a" {
 resource "aws_eip" "nat_eip" {
   domain ="vpc"
   tags = {
-    Name = "Wiz Challenge NAT EIP"
+    Name = "Challenge NAT EIP"
   }
 }
 
@@ -84,7 +84,7 @@ resource "aws_nat_gateway" "nat_gw" {
   subnet_id     = aws_subnet.public.id
 
   tags = {
-    Name = "Wiz Challenge NAT Gateway"
+    Name = "Challenge NAT Gateway"
   }
 }
 
@@ -98,7 +98,7 @@ resource "aws_route_table" "private" {
   }
 
   tags = {
-    Name = "Wiz Challenge Private Route Table"
+    Name = "Challenge Private Route Table"
   }
 }
 
@@ -125,7 +125,7 @@ resource "aws_security_group" "eks_cluster_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
   tags = {
-    Name = "Wiz Challenge"
+    Name = "Challenge"
   }
 }
 
@@ -135,7 +135,7 @@ resource "aws_security_group" "mongodb_sg" {
   vpc_id      = aws_vpc.main.id
 
   ingress {
-    description = "Allow SSH from anywhere (Wiz Challenge requirement)"
+    description = "Allow SSH from anywhere (Challenge requirement)"
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
@@ -158,7 +158,7 @@ resource "aws_security_group" "mongodb_sg" {
   }
 
   tags = {
-    Name = "Wiz Challenge MongoDB SG"
+    Name = "Challenge MongoDB SG"
   }
 }
 
@@ -173,7 +173,7 @@ resource "aws_eks_cluster" "eks" {
     security_group_ids = [aws_security_group.eks_cluster_sg.id]
   }
   tags = {
-    Name = "Wiz Challenge"
+    Name = "Challenge"
   }
 }
 
@@ -189,7 +189,7 @@ resource "aws_eks_node_group" "node" {
     min_size     = 1
   }
   tags = {
-    Name = "Wiz Challenge"
+    Name = "Challenge"
   }
 }
 
@@ -210,7 +210,7 @@ resource "aws_iam_role" "eks" {
     ]
   })
   tags = {
-    Name = "Wiz Challenge"
+    Name = "Challenge"
   }
 }
 
@@ -236,7 +236,7 @@ resource "aws_iam_role" "eks_node" {
     ]
   })
   tags = {
-    Name = "Wiz Challenge"
+    Name = "Challenge"
   }
 }
 # GOOD CONFIG #---------------------------------------------------------------------
@@ -271,7 +271,7 @@ resource "aws_iam_role_policy_attachment" "eks_node_AdministratorAccess" {
 
 # EC2 Instance for MongoDB
 resource "aws_instance" "mongodb_instance" {
-  ami                         = "ami-055744c75048d8296"
+  ami                         = "ami-055744c75048d8296" #Ubuntu 18.04 - Old as per challenge requirement, only in us-east-1
   instance_type               = "t3.micro"
   subnet_id                   = aws_subnet.public.id
   vpc_security_group_ids      = [aws_security_group.mongodb_sg.id]
@@ -281,13 +281,13 @@ resource "aws_instance" "mongodb_instance" {
               apt-get update -y
               apt-get install -y gnupg wget curl
 
-              # Create wizuser
-              useradd -m -s /bin/bash wizuser
-              mkdir -p /home/wizuser/.ssh
-              echo "ssh-rsa AAAAB3...YOUR_PUBLIC_KEY... user@host" > /home/wizuser/.ssh/authorized_keys
-              chown -R wizuser:wizuser /home/wizuser/.ssh
-              chmod 700 /home/wizuser/.ssh
-              chmod 600 /home/wizuser/.ssh/authorized_keys
+              # Create challengeuser
+              useradd -m -s /bin/bash challengeuser
+              mkdir -p /home/challengeuser/.ssh
+              echo "ssh-rsa AAAAB3...YOUR_PUBLIC_KEY... user@host" > /home/challengeuser/.ssh/authorized_keys
+              chown -R challengeuser:challengeuser /home/challengeuser/.ssh
+              chmod 700 /home/challengeuser/.ssh
+              chmod 600 /home/challengeuser/.ssh/authorized_keys
 
               # Lock ubuntu user
               # passwd -l ubuntu
@@ -306,7 +306,7 @@ resource "aws_instance" "mongodb_instance" {
               EOF
 
   tags = {
-    Name    = "Wiz Challenge"
+    Name    = "Challenge"
   }
 }
 
@@ -314,7 +314,7 @@ resource "aws_instance" "mongodb_instance" {
 resource "aws_s3_bucket" "backup_bucket" {
   bucket = "challenge-docker-backups"
   tags = {
-    Name = "Wiz Challenge"
+    Name = "Challenge"
   }
 }
 

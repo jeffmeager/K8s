@@ -1,22 +1,22 @@
-resource "aws_secretsmanager_secret" "mongodb_username" {
-  name        = "mongodb_username-${var.build_timestamp}"
-  description = "MongoDB admin username"
-}
+# resource "aws_secretsmanager_secret" "mongodb_username" {
+#   name        = "mongodb_username-${var.build_timestamp}"
+#   description = "MongoDB admin username"
+# }
 
-resource "aws_secretsmanager_secret_version" "mongodb_username_version" {
-  secret_id     = aws_secretsmanager_secret.mongodb_username.id
-  secret_string = var.mongodb_username
-}
+# resource "aws_secretsmanager_secret_version" "mongodb_username_version" {
+#   secret_id     = aws_secretsmanager_secret.mongodb_username.id
+#   secret_string = var.mongodb_username
+# }
 
-resource "aws_secretsmanager_secret" "mongodb_password" {
-  name        = "mongodb_password-${var.build_timestamp}"
-  description = "MongoDB admin password"
-}
+# resource "aws_secretsmanager_secret" "mongodb_password" {
+#   name        = "mongodb_password-${var.build_timestamp}"
+#   description = "MongoDB admin password"
+# }
 
-resource "aws_secretsmanager_secret_version" "mongodb_password_version" {
-  secret_id     = aws_secretsmanager_secret.mongodb_password.id
-  secret_string = var.mongodb_password
-}
+# resource "aws_secretsmanager_secret_version" "mongodb_password_version" {
+#   secret_id     = aws_secretsmanager_secret.mongodb_password.id
+#   secret_string = var.mongodb_password
+# }
 
 resource "random_password" "secret_key" {
   length  = 32

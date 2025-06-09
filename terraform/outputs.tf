@@ -18,14 +18,15 @@ output "s3_backup_bucket_name" {
   value = aws_s3_bucket.backup_bucket.bucket
 }
 
-output "mongodb_username_secret_arn" {
-  value = aws_secretsmanager_secret.mongodb_username.arn
-}
-
-output "mongodb_password_secret_arn" {
-  value = aws_secretsmanager_secret.mongodb_password.arn
-}
-
 output "eks_node_role_arn" {
   value = aws_iam_role.eks_node.arn
 }
+
+# output "mongodb_username_secret_arn" {
+#   value = aws_secretsmanager_secret.mongodb_username.arn
+# }
+
+# output "mongodb_password_secret_arn" {
+#   value = aws_secretsmanager_secret.mongodb_password.arn
+# }
+
