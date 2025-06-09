@@ -5,7 +5,7 @@ pipeline {
 
     environment {
         PATH                = "/opt/homebrew/bin:/usr/local/bin:${env.PATH}"
-        AWS_PROFILE         = 'devops-admin'
+        AWS_PROFILE         = 'jeff-iam'
         AWS_DEFAULT_REGION  = 'ap-southeast-2'
     }
 
