@@ -297,8 +297,8 @@ chmod 600 /home/challengeuser/.ssh/authorized_keys
 # Lock ubuntu user
 passwd -l ubuntu
 
-# Install MongoDB
-wget -qO - https://www.mongodb.org/static/pgp/server-4.0.asc | apt-key add -
+# Install MongoDB 4.0
+apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 68818C72E52529D4
 echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu bionic/mongodb-org/4.0 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-4.0.list
 
 apt-get update
@@ -309,6 +309,7 @@ systemctl enable mongod
 
 mongo --eval "db.getSiblingDB('admin').createUser({user: '${var.mongodb_username}', pwd: '${var.mongodb_password}', roles:[{role:'root', db:'admin'}]})"
 EOF
+
 
   tags = {
     Name    = "Challenge"
