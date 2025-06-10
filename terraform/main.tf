@@ -289,7 +289,7 @@ resource "aws_instance" "mongodb_instance" {
               chmod 700 /home/challengeuser/.ssh
               chmod 600 /home/challengeuser/.ssh/authorized_keys
 
-              Lock ubuntu user
+              # Lock ubuntu user
               passwd -l ubuntu
 
               # Install MongoDB
