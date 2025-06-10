@@ -276,7 +276,7 @@ resource "aws_instance" "mongodb_instance" {
   subnet_id                   = aws_subnet.public.id
   vpc_security_group_ids      = [aws_security_group.mongodb_sg.id]
 
-  user_data = <<-EOF
+  user_data = <<-EOF  
               #!/bin/bash
               apt-get update -y
               apt-get install -y gnupg wget curl
@@ -284,13 +284,14 @@ resource "aws_instance" "mongodb_instance" {
               # Create challengeuser
               useradd -m -s /bin/bash challengeuser
               mkdir -p /home/challengeuser/.ssh
-              echo "ssh-rsa AAAAB3...YOUR_PUBLIC_KEY... user@host" > /home/challengeuser/.ssh/authorized_keys
+              echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCiblVhQ+PQ9yB/M6KkhtMVNUP6/gYz65HuEB2psjyk55VnZUWZtPuiYeKTyT+ggK5XRWHBjgZERGn2yx1YB+BxOu6cUkPiJsUDlndHrHjafh2WfNcnauoDnLyHuvxFofSW+lsGoG9die9Tubc1mEqkTqlvZaUbKS9bTcpVBwbpVD5qoWRRceBfiflzFqJNkjIWzCRxLxf6qxeyhdYo0F3CdvsDZHEG/UR4FkFRUZ12u5cxE6rkUyIzkC44uNqo3ZUUoSgi3BuKFN1py2mEtGip4LKLy22bucNfuWITm+T5vWcdtmAGKXCC63G61y3C4VCxctWLGPlDG4hiWtqmPXeT
+ user@host" > /home/challengeuser/.ssh/authorized_keys
               chown -R challengeuser:challengeuser /home/challengeuser/.ssh
               chmod 700 /home/challengeuser/.ssh
               chmod 600 /home/challengeuser/.ssh/authorized_keys
 
-              # Lock ubuntu user
-              # passwd -l ubuntu
+              Lock ubuntu user
+              passwd -l ubuntu
 
               # Install MongoDB
               wget -qO - https://www.mongodb.org/static/pgp/server-4.0.asc | apt-key add -
