@@ -269,61 +269,37 @@ resource "aws_iam_role_policy_attachment" "eks_node_AdministratorAccess" {
 }
 # -----------------------------------------------------------------------------------
 
-# EC2 Instance for MongoDB
-resource "aws_instance" "mongodb_instance" {
-  ami                         = "ami-055744c75048d8296" #Ubuntu 18.04 - Old as per challenge requirement, only in us-east-1
-  instance_type               = "t3.micro"
-  subnet_id                   = aws_subnet.public.id
-  vpc_security_group_ids      = [aws_security_group.mongodb_sg.id]
+# IAM Role for MongoDB host
+resource "aws_iam_role" "mongodb_instance_role" {
+  name = "mongodb-instance-role"
 
-  user_data = <<-EOF
-#!/bin/bash
-apt-get update -y
-apt-get install -y gnupg wget curl
-
-# Create challengeuser
-useradd -m -s /bin/bash challengeuser
-
-# Add challengeuser to the sudo group *without* requiring a password
-usermod -aG sudo challengeuser
-echo "challengeuser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/challengeuser
-
-mkdir -p /home/challengeuser/.ssh
-echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCiblVhQ+PQ9yB/M6KkhtMVNUP6/gYz65HuEB2psjyk55VnZUWZtPuiYeKTyT+ggK5XRWHBjgZERGn2yx1YB+BxOu6cUkPiJsUDlndHrHjafh2WfNcnauoDnLyHuvxFofSW+lsGoG9die9Tubc1mEqkTqlvZaUbKS9bTcpVBwbpVD5qoWRRceBfiflzFqJNkjIWzCRxLxf6qxeyhdYo0F3CdvsDZHEG/UR4FkFRUZ12u5cxE6rkUyIzkC44uNqo3ZUUoSgi3BuKFN1py2mEtGip4LKLy22bucNfuWITm+T5vWcdtmAGKXCC63G61y3C4VCxctWLGPlDG4hiWtqmPXeT user@host" > /home/challengeuser/.ssh/authorized_keys
-chown -R challengeuser:challengeuser /home/challengeuser/.ssh
-chmod 700 /home/challengeuser/.ssh
-chmod 600 /home/challengeuser/.ssh/authorized_keys
-
-# Lock ubuntu user
-passwd -l ubuntu
-
-# Install MongoDB 4.0 (Disabling GPG Check - UNSAFE!)
-echo "deb [trusted=yes arch=amd64] https://repo.mongodb.org/apt/ubuntu bionic/mongodb-org/4.0 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-4.0.list
-
-apt-get update
-apt-get install -y mongodb-org=4.0.28 mongodb-org-server=4.0.28 mongodb-org-shell=4.0.28 mongodb-org-mongos=4.0.28 mongodb-org-tools=4.0.28
-
-systemctl start mongod
-systemctl enable mongod
-
-# Wait for mongod to start
-for i in {1..30}; do
-  if nc -z localhost 27017; then
-    echo "MongoDB is up!"
-    break
-  fi
-  echo "Waiting for MongoDB to start ($i/30)..."
-  sleep 1
-done
-
-mongo --eval "db.getSiblingDB('admin').createUser({user: '${var.mongodb_username}', pwd: '${var.mongodb_password}', roles:[{role:'root', db:'admin'}]})"
-EOF
-
-
-
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
   tags = {
-    Name    = "Challenge"
+    Name = "Challenge"
   }
+}
+
+# Attach overly permissive policy to role
+resource "aws_iam_role_policy_attachment" "mongodb_instance_role_attach" {
+  role       = aws_iam_role.mongodb_instance_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
+}
+
+# Instance profile to use role for Mongodb
+resource "aws_iam_instance_profile" "mongodb_instance_profile" {
+  name = "mongodb-instance-profile"
+  role = aws_iam_role.mongodb_instance_role.name
 }
 
 resource "null_resource" "wait_for_cluster_ready" {
