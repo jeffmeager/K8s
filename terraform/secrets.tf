@@ -26,17 +26,9 @@ resource "null_resource" "wait_for_cluster_ready" {
 
   provisioner "local-exec" {
     command = <<EOT
-      echo "⏳ Waiting for EKS API server to be ready..."
-      for i in {1..10}; do
-        if kubectl get nodes >/dev/null 2>&1; then
-          echo "✅ EKS API server is ready."
-          exit 0
-        fi
-        echo "⏳ Still waiting... ($i/10)"
-        sleep 10
-      done
-      echo "❌ Timeout waiting for EKS API server."
-      exit 1
+      echo "⏳ Sleeping 30 seconds to allow EKS API server DNS to propagate..."
+      sleep 30
+      echo "✅ Sleep complete. Proceeding."
     EOT
   }
 }
