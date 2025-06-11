@@ -114,7 +114,6 @@ pipeline {
                         sh '''
                             set -o errexit -o pipefail -o nounset
                             kubectl apply -f webapp-sa.yaml
-                            wait 10
                             kubectl apply -f webapp-deployment.yaml
 
                             echo "⏳ Waiting for webapp-deployment to be Ready..."
