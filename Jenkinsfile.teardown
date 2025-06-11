@@ -118,6 +118,12 @@ pipeline {
                                 '''
                             }
                         }
+                        // Sub-stage 5: Cleanup AWS Secrets Manager
+                        sh '''
+                            aws secretsmanager delete-secret \
+                                --secret-id webapp-secrets \
+                                --force-delete-without-recovery || true
+                        '''
                     }
                 }
             }

@@ -19,11 +19,6 @@ pipeline {
 
         stage('Terraform & Deploy') {
             steps {
-                script {
-                    def BUILD_TIMESTAMP = new Date().format('yyyyMMddHHmmss')
-                    env.BUILD_TIMESTAMP = BUILD_TIMESTAMP  // export to env for all sh steps
-                }
-
                 withCredentials([
                     string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
                     string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY'),
@@ -41,8 +36,7 @@ pipeline {
                             -backend-config="region=ap-southeast-2"
 
                             terraform apply -auto-approve \
-                                -var="region=${AWS_DEFAULT_REGION}" \
-                                -var="build_timestamp=${BUILD_TIMESTAMP}"
+                                -var="region=${AWS_DEFAULT_REGION}"
                         """
                     }
 
@@ -108,21 +102,20 @@ pipeline {
                         fi
                     '''
 
-                    // Apply SecretProviderClass with current BUILD_TIMESTAMP
+                    // Apply SecretProviderClass
                     dir('kubernetes/deployments') {
-                        sh """
+                        sh '''
                             set -o errexit -o pipefail -o nounset
-                            echo "Applying SecretProviderClass with current BUILD_TIMESTAMP=${BUILD_TIMESTAMP}"
-                            envsubst < secretproviderclass-template.yaml | kubectl apply -f -
-                        """
+                            kubectl apply -fsecretproviderclass-template.yaml
+                        '''
                     }
 
                     // Wait for secret to be synced
                     sh '''
-                    echo "Waiting for secret webapp-secrets-sync to be created by CSI driver..."
+                    echo "Waiting for secret webapp-secrets to be created by CSI driver..."
                     for i in {1..30}; do
-                        if kubectl get secret webapp-secrets-sync >/dev/null 2>&1; then
-                        echo "✅ Secret webapp-secrets-sync is now present."
+                        if kubectl get secret webapp-secrets >/dev/null 2>&1; then
+                        echo "✅ Secret webapp-secrets is now present."
                         break
                         fi
                         echo "⏳ Waiting... ($i/30)"
@@ -130,8 +123,8 @@ pipeline {
                     done
 
                     # Final check (fail the pipeline if secret was not created in time)
-                    if ! kubectl get secret webapp-secrets-sync >/dev/null 2>&1; then
-                        echo "❌ Secret webapp-secrets-sync was not created within timeout."
+                    if ! kubectl get secret webapp-secrets >/dev/null 2>&1; then
+                        echo "❌ Secret webapp-secrets was not created within timeout."
                         exit 1
                     fi
                     '''

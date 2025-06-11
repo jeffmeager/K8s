@@ -31,12 +31,12 @@ spec:
             - name: MONGODB_URI
               valueFrom:
                 secretKeyRef:
-                  name: webapp-secrets-sync
+                  name: webapp-secrets
                   key: mongodb-uri
             - name: SECRET_KEY
               valueFrom:
                 secretKeyRef:
-                  name: webapp-secrets-sync
+                  name: webapp-secrets
                   key: secret-key
           volumeMounts:
             - name: secrets-store-inline
