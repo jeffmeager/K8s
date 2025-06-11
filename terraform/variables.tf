@@ -31,3 +31,7 @@ variable "mongodb_password" {
 #   default     = "noop"
 #   sensitive   = true
 # }
+
+variable "cloudflare_api_token" {
+  type    = string
+}

@@ -326,6 +326,18 @@ EOF
   }
 }
 
+resource "null_resource" "wait_for_cluster_ready" {
+  depends_on = [null_resource.aws_auth_apply]
+
+  provisioner "local-exec" {
+    command = <<EOT
+      echo "⏳ Sleeping 30 seconds to allow EKS API server DNS to propagate..."
+      sleep 30
+      echo "✅ Sleep complete. Proceeding."
+    EOT
+  }
+}
+
 # S3 Bucket for MongoDB Backups
 resource "aws_s3_bucket" "backup_bucket" {
   bucket = "challenge-docker-backups"

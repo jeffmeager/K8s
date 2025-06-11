@@ -21,18 +21,6 @@ resource "aws_secretsmanager_secret_version" "webapp_secrets_version" {
   ]
 }
 
-resource "null_resource" "wait_for_cluster_ready" {
-  depends_on = [null_resource.aws_auth_apply]
-
-  provisioner "local-exec" {
-    command = <<EOT
-      echo "⏳ Sleeping 30 seconds to allow EKS API server DNS to propagate..."
-      sleep 30
-      echo "✅ Sleep complete. Proceeding."
-    EOT
-  }
-}
-
 resource "kubernetes_secret" "webapp_secrets" {
   metadata {
     name      = "webapp-secrets"

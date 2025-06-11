@@ -16,3 +16,7 @@ provider "kubernetes" {
   config_path    = var.kubeconfig_path
   config_context = aws_eks_cluster.eks.arn
 }
+
+provider "cloudflare" {
+  api_token = var.cloudflare_api_token
+}
