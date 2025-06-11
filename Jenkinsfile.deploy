@@ -101,14 +101,6 @@ pipeline {
                         fi
                     '''
 
-                    // Apply SecretProviderClass
-                    dir('kubernetes/deployments') {
-                        sh '''
-                            set -o errexit -o pipefail -o nounset
-                            kubectl apply -f secretproviderclass-template.yaml
-                        '''
-                    }
-
                     // Apply Kubernetes manifests
                     dir('kubernetes/deployments') {
                         sh '''

@@ -12,16 +12,9 @@ spec:
       labels:
         app: webapp
     spec:
-      serviceAccountName: webapp-sa   # Allows access to Secrets Manager
+      serviceAccountName: webapp-sa   # Allows access to Secrets Manager (if needed)
       imagePullSecrets:
         - name: ghcr-pull-secret
-      volumes:
-        - name: secrets-store-inline
-          csi:
-            driver: secrets-store.csi.k8s.io
-            readOnly: true
-            volumeAttributes:
-              secretProviderClass: webapp-secrets
       containers:
         - name: webapp
           image: ghcr.io/jeffmeager/tasky:latest
@@ -38,7 +31,3 @@ spec:
                 secretKeyRef:
                   name: webapp-secrets
                   key: secret-key
-          volumeMounts:
-            - name: secrets-store-inline
-              mountPath: "/mnt/secrets-store"
-              readOnly: true
