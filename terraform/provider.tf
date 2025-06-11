@@ -11,3 +11,8 @@ terraform {
     }
   }
 }
+
+provider "kubernetes" {
+  config_path    = var.kubeconfig_path
+  config_context = aws_eks_cluster.eks_cluster.arn
+}
