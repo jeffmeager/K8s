@@ -1,5 +1,4 @@
 // Requires helm, kubectl, terraform, aws cli v2 in runtime
-// build_timestamp used to ensure unique keys in AWS Secrets Manager as it leaves them behind for recovery. Could us force-delete but this is more reliable.
 
 pipeline {
     agent any
@@ -106,28 +105,9 @@ pipeline {
                     dir('kubernetes/deployments') {
                         sh '''
                             set -o errexit -o pipefail -o nounset
-                            kubectl apply -fsecretproviderclass-template.yaml
+                            kubectl apply -f secretproviderclass-template.yaml
                         '''
                     }
-
-                    // Wait for secret to be synced
-                    sh '''
-                    echo "Waiting for secret webapp-secrets to be created by CSI driver..."
-                    for i in {1..30}; do
-                        if kubectl get secret webapp-secrets >/dev/null 2>&1; then
-                        echo "✅ Secret webapp-secrets is now present."
-                        break
-                        fi
-                        echo "⏳ Waiting... ($i/30)"
-                        sleep 5
-                    done
-
-                    # Final check (fail the pipeline if secret was not created in time)
-                    if ! kubectl get secret webapp-secrets >/dev/null 2>&1; then
-                        echo "❌ Secret webapp-secrets was not created within timeout."
-                        exit 1
-                    fi
-                    '''
 
                     // Apply Kubernetes manifests
                     dir('kubernetes/deployments') {
@@ -137,13 +117,18 @@ pipeline {
                         '''
                     }
 
+                    //Apply webapp deployment
                     dir('kubernetes/deployments') {
                         sh '''
                             set -o errexit -o pipefail -o nounset
                             kubectl apply -f webapp-deployment.yaml
+
+                            echo "⏳ Waiting for webapp-deployment to be Ready..."
+                            kubectl rollout status deployment webapp-deployment --timeout=120s
                         '''
                     }
 
+                    // Apply webapp service
                     dir('kubernetes/services') {
                         sh '''
                             set -o errexit -o pipefail -o nounset
