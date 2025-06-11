@@ -17,6 +17,16 @@ provider "kubernetes" {
   config_context = aws_eks_cluster.eks.arn
 }
 
+terraform {
+  required_providers {
+    cloudflare = {
+      source  = "cloudflare/cloudflare"
+      version = "~> 4.19"
+    }
+  }
+}
+
 provider "cloudflare" {
   api_token = var.cloudflare_api_token
 }
+
