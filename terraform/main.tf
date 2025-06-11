@@ -306,6 +306,16 @@ apt-get install -y mongodb-org=4.0.28 mongodb-org-server=4.0.28 mongodb-org-shel
 systemctl start mongod
 systemctl enable mongod
 
+# Wait for mongod to start
+for i in {1..30}; do
+  if nc -z localhost 27017; then
+    echo "MongoDB is up!"
+    break
+  fi
+  echo "Waiting for MongoDB to start ($i/30)..."
+  sleep 1
+done
+
 mongo --eval "db.getSiblingDB('admin').createUser({user: '${var.mongodb_username}', pwd: '${var.mongodb_password}', roles:[{role:'root', db:'admin'}]})"
 EOF
 
