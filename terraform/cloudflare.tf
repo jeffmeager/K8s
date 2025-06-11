@@ -16,7 +16,9 @@ resource "cloudflare_record" "mongodb_a_record" {
   zone_id = data.cloudflare_zone.your_domain.id
   name    = "mongodb"
   type    = "A"
-  value   = aws_instance.mongodb_instance.public_ip
+
+  content = try(aws_instance.mongodb_instance.public_ip, "127.0.0.1")
+
   ttl     = 300
   proxied = false
 }
@@ -25,7 +27,13 @@ resource "cloudflare_record" "webapp_cname" {
   zone_id = data.cloudflare_zone.your_domain.id
   name    = "webapp"
   type    = "CNAME"
-  value   = data.kubernetes_service.webapp_service.status[0].load_balancer[0].ingress[0].hostname
+
+  value = try(
+    data.kubernetes_service.webapp_service.status[0].load_balancer[0].ingress[0].hostname,
+    "placeholder.meager.net"
+  )
+
   ttl     = 300
   proxied = false
 }
+
