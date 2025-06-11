@@ -117,6 +117,25 @@ pipeline {
                         """
                     }
 
+                    // Wait for secret to be synced
+                    sh '''
+                    echo "Waiting for secret webapp-secrets-sync to be created by CSI driver..."
+                    for i in {1..30}; do
+                        if kubectl get secret webapp-secrets-sync >/dev/null 2>&1; then
+                        echo "✅ Secret webapp-secrets-sync is now present."
+                        break
+                        fi
+                        echo "⏳ Waiting... ($i/30)"
+                        sleep 5
+                    done
+
+                    # Final check (fail the pipeline if secret was not created in time)
+                    if ! kubectl get secret webapp-secrets-sync >/dev/null 2>&1; then
+                        echo "❌ Secret webapp-secrets-sync was not created within timeout."
+                        exit 1
+                    fi
+                    '''
+
                     // Apply Kubernetes manifests
                     dir('kubernetes/deployments') {
                         sh '''
