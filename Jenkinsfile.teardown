@@ -113,8 +113,7 @@ pipeline {
                             dir('terraform') {
                                 sh '''
                                     terraform destroy -auto-approve \
-                                        -var region=${AWS_DEFAULT_REGION} \
-                                        -var build_timestamp="noop"
+                                        -var region=${AWS_DEFAULT_REGION}
                                 '''
                             }
                         }
