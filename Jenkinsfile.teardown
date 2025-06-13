@@ -95,9 +95,10 @@ pipeline {
                                 fi
                             fi
                         '''
-                        
+                        // Sub-stage 3: Empty S3 bucket
+                            sh 'aws s3 rm s3://challenge-docker-backups --recursive'
 
-                        // Sub-stage 3: Terraform Init
+                        // Sub-stage 4: Terraform Init
                         dir('terraform') {
                             sh '''
                                 terraform init -backend-config="bucket=jeffmeager-challenge-terraform-state-bucket" \
@@ -106,7 +107,7 @@ pipeline {
                             '''
                         }
 
-                        // Sub-stage 4: Terraform Destroy
+                        // Sub-stage 5: Terraform Destroy
                         withCredentials([
                             string(credentialsId: 'mongodb-username', variable: 'TF_VAR_mongodb_username'),
                             string(credentialsId: 'mongodb-password', variable: 'TF_VAR_mongodb_password')
@@ -118,7 +119,7 @@ pipeline {
                                 '''
                             }
                         }
-                        // Sub-stage 5: Cleanup AWS Secrets Manager
+                        // Sub-stage 6: Cleanup AWS Secrets Manager
                         sh '''
                             aws secretsmanager delete-secret \
                                 --secret-id webapp-secrets \
