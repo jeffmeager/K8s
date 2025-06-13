@@ -13,31 +13,10 @@ resource "aws_secretsmanager_secret_version" "webapp_secrets_version" {
 
   secret_string = jsonencode({
     mongodb-uri = "mongodb://${var.mongodb_username}:${urlencode(var.mongodb_password)}@${aws_instance.mongodb_instance.public_ip}:27017/admin"
-    secret-key  = random_password.secret_key.result
+    secret-key  = var.mongo_secret_key
   })
 
   depends_on = [
     aws_instance.mongodb_instance
-  ]
-}
-
-resource "kubernetes_secret" "webapp_secrets" {
-  metadata {
-    name      = "webapp-secrets"
-    namespace = "default"
-  }
-
-  data = {
-    mongodb-uri = "mongodb://${var.mongodb_username}:${urlencode(var.mongodb_password)}@${aws_instance.mongodb_instance.public_ip}:27017"
-
-    secret-key  = random_password.secret_key.result
-  }
-
-  type = "Opaque"
-
-  depends_on = [
-    aws_instance.mongodb_instance,
-    aws_secretsmanager_secret_version.webapp_secrets_version,
-    null_resource.wait_for_cluster_ready
   ]
 }

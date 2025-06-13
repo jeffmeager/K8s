@@ -6,11 +6,6 @@ variable "region" {
   default     = "us-east-1"
 }
 
-variable "kubeconfig_path" {
-  type    = string
-  default = "~/.kube/config"
-}
-
 variable "mongodb_username" {
   type        = string
   description = "MongoDB admin username"
@@ -32,6 +27,6 @@ variable "mongodb_password" {
 #   sensitive   = true
 # }
 
-variable "cloudflare_api_token" {
+variable "mongo_secret_key" {
   type    = string
 }
