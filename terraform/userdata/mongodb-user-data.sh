@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# Variables — can be passed in from Terraform/templatefile()
-MONGODB_BINDIP="$${mongodb_bind_ip:-0.0.0.0}"
-MONGO_USERNAME="$${mongodb_username}"
-MONGO_PASSWORD="$${mongodb_password}"
-BACKUP_BUCKET="$${backup_bucket}"
+# Static values and Terraform-injected values
+MONGODB_BINDIP="0.0.0.0"
+MONGO_USERNAME="${mongodb_username}"
+MONGO_PASSWORD="${mongodb_password}"
+BACKUP_BUCKET="${backup_bucket}"
 
 echo "MONGODB_BINDIP: $MONGODB_BINDIP"
 echo "MONGO_USERNAME: $MONGO_USERNAME"
@@ -38,8 +38,8 @@ echo "deb [trusted=yes arch=amd64] https://repo.mongodb.org/apt/ubuntu bionic/mo
 apt-get update
 apt-get install -y mongodb-org=4.0.28 mongodb-org-server=4.0.28 mongodb-org-shell=4.0.28 mongodb-org-mongos=4.0.28 mongodb-org-tools=4.0.28 awscli
 
-# Update mongod.conf to bind to desired IP
-sed -i "s/^  bindIp: .*/  bindIp: $${MONGODB_BINDIP}/" /etc/mongod.conf
+# Update mongod.conf to bind to 0.0.0.0
+sed -i "s/^  bindIp: .*/  bindIp: 0.0.0.0/" /etc/mongod.conf
 
 # Start MongoDB
 systemctl restart mongod
@@ -56,7 +56,7 @@ for i in {1..30}; do
 done
 
 # Create admin user
-mongo --eval "db.getSiblingDB('admin').createUser({user: '$${MONGO_USERNAME}', pwd: '$${MONGO_PASSWORD}', roles:[{role:'root', db:'admin'}]})"
+mongo --eval "db.getSiblingDB('admin').createUser({user: '${MONGO_USERNAME}', pwd: '${MONGO_PASSWORD}', roles:[{role:'root', db:'admin'}]})"
 
 # Inject backup.sh script
 cat <<'EOD' > /home/challengeuser/backup.sh
@@ -76,7 +76,7 @@ aws s3 cp $BACKUP_DIR $S3_BUCKET --recursive
 EOD
 
 # Replace placeholders in backup.sh
-sed -i "s|\$${BACKUP_BUCKET}|$${BACKUP_BUCKET}|" /home/challengeuser/backup.sh
+sed -i "s|\$${BACKUP_BUCKET}|${BACKUP_BUCKET}|" /home/challengeuser/backup.sh
 
 # Set permissions
 chown challengeuser:challengeuser /home/challengeuser/backup.sh
@@ -84,5 +84,3 @@ chmod +x /home/challengeuser/backup.sh
 
 # Add cron job for backup.sh (runs hourly)
 echo "0 * * * * /home/challengeuser/backup.sh >> /home/challengeuser/backup.log 2>&1" | crontab -u challengeuser -
-
-
