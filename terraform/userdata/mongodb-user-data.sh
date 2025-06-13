@@ -6,6 +6,11 @@ MONGO_USERNAME="$${mongodb_username}"
 MONGO_PASSWORD="$${mongodb_password}"
 BACKUP_BUCKET="$${backup_bucket}"
 
+echo "MONGODB_BINDIP: $MONGODB_BINDIP"
+echo "MONGO_USERNAME: $MONGO_USERNAME"
+echo "MONGO_PASSWORD: $MONGO_PASSWORD"
+echo "BACKUP_BUCKET: $BACKUP_BUCKET"
+
 # Install dependencies
 apt-get update -y
 apt-get install -y gnupg wget curl awscli mongodb-org-tools
