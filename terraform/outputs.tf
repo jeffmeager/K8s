@@ -14,6 +14,10 @@ output "mongodb_instance_public_ip" {
   value = aws_instance.mongodb_instance.public_ip
 }
 
+output "mongodb_instance_private_ip" {
+  value = aws_instance.mongodb_instance.private_ip
+}
+
 output "s3_backup_bucket_name" {
   value = aws_s3_bucket.backup_bucket.bucket
 }
