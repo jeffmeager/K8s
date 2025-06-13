@@ -129,8 +129,11 @@ pipeline {
 
                                 echo "📄 Preparing webapp-secret.yaml with injected values..."
 
+                                # URI encode the password
+                                export ENCODED_MONGODB_PASSWORD=\$(python3 -c "import urllib.parse; print(urllib.parse.quote('''${mongodb_password}'''))")
+
                                 export MONGODB_USERNAME='${mongodb_username}'
-                                export MONGODB_PASSWORD='${mongodb_password}'
+                                export MONGODB_PASSWORD="\${ENCODED_MONGODB_PASSWORD}"
                                 export MONGODB_IP='${mongodb_ip}'
                                 export MONGO_SECRET_KEY='${mongodb_secret_key}'
 
