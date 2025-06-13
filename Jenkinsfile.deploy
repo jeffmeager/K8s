@@ -110,30 +110,36 @@ pipeline {
 //                            kubectl apply -f cluster-admin-rolebinding.yaml
 //                        '''
 //                    }
-                    // Capture Terraform outputs
-                    def mongodb_ip = sh(script: 'terraform output -raw mongodb_instance_public_ip', returnStdout: true).trim()
-                    // Capture Jenkins TF_VAR environment variables
-                    def mongodb_username = env.TF_VAR_mongodb_username
-                    def mongodb_password = env.TF_VAR_mongodb_password
-                    def mongodb_secret_key = env.TF_VAR_mongodb_secret_key
-                    // Apply webapp-secret.yaml with substituted variables
+                    // Apply Kubernetes manifests
                     dir('kubernetes/deployments') {
-                        sh """
-                            set -o errexit -o pipefail -o nounset
+                        script {
+                            // Capture Terraform outputs
+                            def mongodb_ip = sh(script: 'terraform output -raw mongodb_instance_public_ip', returnStdout: true).trim()
 
-                            echo "📄 Preparing webapp-secret.yaml with injected values..."
+                            // Capture Jenkins TF_VAR environment variables
+                            def mongodb_username = env.TF_VAR_mongodb_username
+                            def mongodb_password = env.TF_VAR_mongodb_password
+                            def mongodb_secret_key = env.TF_VAR_mongodb_secret_key
 
-                            export MONGODB_USERNAME='${mongodb_username}'
-                            export MONGODB_PASSWORD='${mongodb_password}'
-                            export MONGODB_IP='${mongodb_ip}'
-                            export MONGO_SECRET_KEY='${mongo_secret_key}'
+                            // Apply webapp-secret.yaml with substituted variables
+                            sh """
+                                set -o errexit -o pipefail -o nounset
 
-                            envsubst < webapp-secret.yaml.tpl > webapp-secret.yaml
+                                echo "📄 Preparing webapp-secret.yaml with injected values..."
 
-                            echo "🔐 Applying webapp-secret.yaml..."
-                            kubectl apply -f webapp-secret.yaml
-                        """
-}
+                                export MONGODB_USERNAME='${mongodb_username}'
+                                export MONGODB_PASSWORD='${mongodb_password}'
+                                export MONGODB_IP='${mongodb_ip}'
+                                export MONGO_SECRET_KEY='${mongodb_secret_key}'
+
+                                envsubst < webapp-secret.yaml.tpl > webapp-secret.yaml
+
+                                echo "🔐 Applying webapp-secret.yaml..."
+                                kubectl apply -f webapp-secret.yaml
+                            """
+                        }
+                    }
+
 
                     // Apply webapp deployment
 //                    dir('kubernetes/deployments') {
