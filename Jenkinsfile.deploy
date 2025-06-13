@@ -166,6 +166,21 @@ pipeline {
                                 kubectl apply -f webapp-service.yaml
                             '''
                         }
+
+                        // Update Cloudflare DNS records
+                        script {
+                            sh "sleep 20"
+
+                            def webapp_ingress_hostname = sh(
+                                script: "kubectl get svc webapp-service -n default -o jsonpath=\"{.status.loadBalancer.ingress[0].hostname}\"",
+                                returnStdout: true
+                            ).trim()
+
+                            sh """
+                                chmod +x scripts/update-cloudflare-dns.sh
+                                ./scripts/update-cloudflare-dns.sh '${cloudflare_api_token}' '${mongodb_ip}' '${webapp_ingress_hostname}'
+                            """
+                        }
                     }  // END script
                 }  // END withCredentials
             }  // END steps
