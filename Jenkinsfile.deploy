@@ -148,24 +148,24 @@ pipeline {
                         }
 
                         // Apply webapp deployment
-//                        dir('kubernetes/deployments') {
-//                           sh '''
-//                                set -o errexit -o pipefail -o nounset
-//                                kubectl apply -f webapp-sa.yaml
-//                                kubectl apply -f webapp-deployment.yaml
+                        dir('kubernetes/deployments') {
+                           sh '''
+                                set -o errexit -o pipefail -o nounset
+                                kubectl apply -f webapp-sa.yaml
+                                kubectl apply -f webapp-deployment.yaml
 
-//                                echo "⏳ Waiting for webapp-deployment to be Ready..."
-//                                kubectl rollout status deployment webapp-deployment --timeout=120s
-//                            '''
-//                        }
+                                echo "⏳ Waiting for webapp-deployment to be Ready..."
+                                kubectl rollout status deployment webapp-deployment --timeout=120s
+                            '''
+                        }
 
                         // Apply webapp service
-//                        dir('kubernetes/services') {
-//                            sh '''
-//                                set -o errexit -o pipefail -o nounset
-//                                kubectl apply -f webapp-service.yaml
-//                            '''
-//                        }
+                        dir('kubernetes/services') {
+                            sh '''
+                                set -o errexit -o pipefail -o nounset
+                                kubectl apply -f webapp-service.yaml
+                            '''
+                        }
                     }  // END script
                 }  // END withCredentials
             }  // END steps
