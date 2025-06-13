@@ -67,7 +67,7 @@ S3_BUCKET="s3://$${BACKUP_BUCKET}"
 mongodump --host $MONGO_HOST --port $MONGO_PORT --out $BACKUP_DIR
 
 # Upload to S3
-aws s3 cp $BACKUP_DIR $S3_BUCKET --recursive --profile devops-lead
+aws s3 cp $BACKUP_DIR $S3_BUCKET --recursive
 EOD
 
 # Replace placeholders in backup.sh
@@ -77,5 +77,6 @@ sed -i "s|\$${BACKUP_BUCKET}|$${BACKUP_BUCKET}|" /home/challengeuser/backup.sh
 chown challengeuser:challengeuser /home/challengeuser/backup.sh
 chmod +x /home/challengeuser/backup.sh
 
-# Add twice-daily cron job for backup.sh (runs at 2:00 AM and 2:00 PM daily)
-echo "0 2,14 * * * /home/challengeuser/backup.sh >> /home/challengeuser/backup.log 2>&1" | crontab -u challengeuser -
+# Add twice-daily cron job for backup.sh (runs hourly)
+0 * * * * /home/challengeuser/backup.sh >> /home/challengeuser/backup.log 2>&1
+
