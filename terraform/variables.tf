@@ -27,6 +27,6 @@ variable "mongodb_password" {
 #   sensitive   = true
 # }
 
-variable "mongo_secret_key" {
+variable "mongodb_secret_key" {
   type    = string
 }

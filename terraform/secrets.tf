@@ -1,8 +1,3 @@
-resource "random_password" "secret_key" {
-  length  = 32
-  special = false
-}
-
 resource "aws_secretsmanager_secret" "webapp_secrets" {
   name        = "webapp-secrets"
   description = "Secrets for WebApp (MONGODB_URI and SECRET_KEY)"
