@@ -134,10 +134,10 @@ pipeline {
                                 export MONGODB_IP='${mongodb_ip}'
                                 export MONGO_SECRET_KEY='${mongodb_secret_key}'
 
-                                envsubst < webapp-secret.yaml.tpl > webapp-secret.yaml
+                                envsubst < webapp-secrets.yaml.tpl > webapp-secrets.yaml
 
-                                echo "🔐 Applying webapp-secret.yaml..."
-                                kubectl apply -f webapp-secret.yaml
+                                echo "🔐 Applying webapp-secrets.yaml..."
+                                kubectl apply -f webapp-secrets.yaml
                             """
                         }
 
