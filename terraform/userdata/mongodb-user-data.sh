@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# Variables — can be passed in from Terraform/template_file
-MONGODB_BINDIP="${mongodb_bind_ip:-0.0.0.0}"
-MONGO_USERNAME="${mongodb_username}"
-MONGO_PASSWORD="${mongodb_password}"
-BACKUP_BUCKET="${backup_bucket}"
+# Variables — can be passed in from Terraform/templatefile()
+MONGODB_BINDIP="$${mongodb_bind_ip:-0.0.0.0}"
+MONGO_USERNAME="$${mongodb_username}"
+MONGO_PASSWORD="$${mongodb_password}"
+BACKUP_BUCKET="$${backup_bucket}"
 
 # Install dependencies
 apt-get update -y
@@ -34,7 +34,7 @@ apt-get update
 apt-get install -y mongodb-org=4.0.28 mongodb-org-server=4.0.28 mongodb-org-shell=4.0.28 mongodb-org-mongos=4.0.28 mongodb-org-tools=4.0.28 awscli
 
 # Update mongod.conf to bind to desired IP
-sed -i "s/^  bindIp: .*/  bindIp: ${MONGODB_BINDIP}/" /etc/mongod.conf
+sed -i "s/^  bindIp: .*/  bindIp: $${MONGODB_BINDIP}/" /etc/mongod.conf
 
 # Start MongoDB
 systemctl restart mongod
@@ -51,7 +51,7 @@ for i in {1..30}; do
 done
 
 # Create admin user
-mongo --eval "db.getSiblingDB('admin').createUser({user: '${MONGO_USERNAME}', pwd: '${MONGO_PASSWORD}', roles:[{role:'root', db:'admin'}]})"
+mongo --eval "db.getSiblingDB('admin').createUser({user: '$${MONGO_USERNAME}', pwd: '$${MONGO_PASSWORD}', roles:[{role:'root', db:'admin'}]})"
 
 # Inject backup.sh script
 cat <<'EOD' > /home/challengeuser/backup.sh
@@ -61,7 +61,7 @@ cat <<'EOD' > /home/challengeuser/backup.sh
 MONGO_HOST="localhost"
 MONGO_PORT="27017"
 BACKUP_DIR="/home/challengeuser/mongo_backup"
-S3_BUCKET="s3://${BACKUP_BUCKET}"
+S3_BUCKET="s3://$${BACKUP_BUCKET}"
 
 # Perform backup
 mongodump --host $MONGO_HOST --port $MONGO_PORT --out $BACKUP_DIR
@@ -71,7 +71,7 @@ aws s3 cp $BACKUP_DIR $S3_BUCKET --recursive --profile devops-lead
 EOD
 
 # Replace placeholders in backup.sh
-sed -i "s|\${BACKUP_BUCKET}|${BACKUP_BUCKET}|" /home/challengeuser/backup.sh
+sed -i "s|\$${BACKUP_BUCKET}|$${BACKUP_BUCKET}|" /home/challengeuser/backup.sh
 
 # Set permissions
 chown challengeuser:challengeuser /home/challengeuser/backup.sh
