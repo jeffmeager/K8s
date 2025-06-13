@@ -114,55 +114,6 @@ resource "aws_route_table_association" "private_az2" {
   route_table_id = aws_route_table.private.id
 }
 
-# Security Groups
-resource "aws_security_group" "eks_cluster_sg" {
-  vpc_id = aws_vpc.main.id
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  tags = {
-    Name = "Challenge"
-  }
-}
-
-resource "aws_security_group" "mongodb_sg" {
-  name        = "mongodb-sg"
-  description = "Allow SSH and EKS to connect to MongoDB"
-  vpc_id      = aws_vpc.main.id
-
-  ingress {
-    description = "Allow SSH from anywhere (Challenge requirement)"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    description     = "Allow MongoDB from EKS Cluster SG"
-    from_port       = 27017
-    to_port         = 27017
-    protocol        = "tcp"
-    security_groups = [aws_security_group.eks_cluster_sg.id]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name = "Challenge MongoDB SG"
-  }
-}
-
-
 # EKS Cluster
 resource "aws_eks_cluster" "eks" {
   name     = "challenge-eks-cluster"
@@ -182,6 +133,7 @@ resource "aws_eks_node_group" "node" {
   cluster_name    = aws_eks_cluster.eks.name
   node_role_arn   = aws_iam_role.eks_node.arn
   subnet_ids      = [aws_subnet.private_az1.id, aws_subnet.private_az2.id]
+  security_group_ids = [aws_security_group.eks_node_sg.id]
 
   scaling_config {
     desired_size = 2
