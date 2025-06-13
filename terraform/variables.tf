@@ -28,5 +28,7 @@ variable "mongodb_password" {
 # }
 
 variable "mongodb_secret_key" {
-  type    = string
+  type        = string
+  default     = "noop"
+  sensitive   = true
 }
