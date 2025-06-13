@@ -1,4 +1,12 @@
 #!/bin/bash
+
+# Variables — can be passed in from Terraform/template_file
+MONGODB_BINDIP="${mongodb_bind_ip:-0.0.0.0}"
+MONGO_USERNAME="${mongodb_username}"
+MONGO_PASSWORD="${mongodb_password}"
+BACKUP_BUCKET="${backup_bucket}"
+
+# Install dependencies
 apt-get update -y
 apt-get install -y gnupg wget curl awscli mongodb-org-tools
 
@@ -9,6 +17,7 @@ useradd -m -s /bin/bash challengeuser
 usermod -aG sudo challengeuser
 echo "challengeuser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/challengeuser
 
+# Setup SSH authorized keys
 mkdir -p /home/challengeuser/.ssh
 echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCiblVhQ+PQ9yB/M6KkhtMVNUP6/gYz65HuEB2psjyk55VnZUWZtPuiYeKTyT+ggK5XRWHBjgZERGn2yx1YB+BxOu6cUkPiJsUDlndHrHjafh2WfNcnauoDnLyHuvxFofSW+lsGoG9die9Tubc1mEqkTqlvZaUbKS9bTcpVBwbpVD5qoWRRceBfiflzFqJNkjIWzCRxLxf6qxeyhdYo0F3CdvsDZHEG/UR4FkFRUZ12u5cxE6rkUyIzkC44uNqo3ZUUoSgi3BuKFN1py2mEtGip4LKLy22bucNfuWITm+T5vWcdtmAGKXCC63G61y3C4VCxctWLGPlDG4hiWtqmPXeT user@host" > /home/challengeuser/.ssh/authorized_keys
 chown -R challengeuser:challengeuser /home/challengeuser/.ssh
@@ -24,7 +33,11 @@ echo "deb [trusted=yes arch=amd64] https://repo.mongodb.org/apt/ubuntu bionic/mo
 apt-get update
 apt-get install -y mongodb-org=4.0.28 mongodb-org-server=4.0.28 mongodb-org-shell=4.0.28 mongodb-org-mongos=4.0.28 mongodb-org-tools=4.0.28 awscli
 
-systemctl start mongod
+# Update mongod.conf to bind to desired IP
+sed -i "s/^  bindIp: .*/  bindIp: ${MONGODB_BINDIP}/" /etc/mongod.conf
+
+# Start MongoDB
+systemctl restart mongod
 systemctl enable mongod
 
 # Wait for mongod to start
@@ -38,7 +51,7 @@ for i in {1..30}; do
 done
 
 # Create admin user
-mongo --eval "db.getSiblingDB('admin').createUser({user: '${mongodb_username}', pwd: '${mongodb_password}', roles:[{role:'root', db:'admin'}]})"
+mongo --eval "db.getSiblingDB('admin').createUser({user: '${MONGO_USERNAME}', pwd: '${MONGO_PASSWORD}', roles:[{role:'root', db:'admin'}]})"
 
 # Inject backup.sh script
 cat <<'EOD' > /home/challengeuser/backup.sh
@@ -48,7 +61,7 @@ cat <<'EOD' > /home/challengeuser/backup.sh
 MONGO_HOST="localhost"
 MONGO_PORT="27017"
 BACKUP_DIR="/home/challengeuser/mongo_backup"
-S3_BUCKET="s3://${backup_bucket}"
+S3_BUCKET="s3://${BACKUP_BUCKET}"
 
 # Perform backup
 mongodump --host $MONGO_HOST --port $MONGO_PORT --out $BACKUP_DIR
@@ -57,6 +70,10 @@ mongodump --host $MONGO_HOST --port $MONGO_PORT --out $BACKUP_DIR
 aws s3 cp $BACKUP_DIR $S3_BUCKET --recursive --profile devops-lead
 EOD
 
+# Replace placeholders in backup.sh
+sed -i "s|\${BACKUP_BUCKET}|${BACKUP_BUCKET}|" /home/challengeuser/backup.sh
+
+# Set permissions
 chown challengeuser:challengeuser /home/challengeuser/backup.sh
 chmod +x /home/challengeuser/backup.sh
 
