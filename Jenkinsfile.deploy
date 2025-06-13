@@ -111,12 +111,12 @@ pipeline {
                         '''
 
                         // Apply Kubernetes manifests
-//                        dir('kubernetes/deployments') {
-//                            sh '''
-//                                set -o errexit -o pipefail -o nounset
-//                                kubectl apply -f cluster-admin-rolebinding.yaml
-//                            '''
-//                        }
+                        dir('kubernetes/deployments') {
+                            sh '''
+                                set -o errexit -o pipefail -o nounset
+                                kubectl apply -f cluster-admin-rolebinding.yaml
+                            '''
+                        }
 
                         // Apply webapp-secret.yaml with substituted variables
                         dir('kubernetes/deployments') {
@@ -127,8 +127,10 @@ pipeline {
                             sh """
                                 set -o errexit -o pipefail -o nounset
 
-                                echo "📄 Preparing webapp-secret.yaml with injected values..."
+                                echo "📄 Preparing webapp-secrets.yaml with injected values..."
 
+                                # Disable tracing during sensitive exports
+                                set +x
                                 # URI encode the password
                                 export ENCODED_MONGODB_PASSWORD=\$(python3 -c "import urllib.parse; print(urllib.parse.quote('''${mongodb_password}'''))")
 
@@ -136,6 +138,7 @@ pipeline {
                                 export MONGODB_PASSWORD="\${ENCODED_MONGODB_PASSWORD}"
                                 export MONGODB_IP='${mongodb_ip}'
                                 export MONGO_SECRET_KEY='${mongodb_secret_key}'
+                                set -x  # Re-enable tracing
 
                                 envsubst < webapp-secrets.yaml.tpl > webapp-secrets.yaml
 
