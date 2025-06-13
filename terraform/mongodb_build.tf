@@ -11,6 +11,9 @@ resource "aws_instance" "mongodb_instance" {
     mongodb_password = var.mongodb_password
     backup_bucket    = aws_s3_bucket.backup_bucket.bucket
   })
+
+  depends_on = [aws_s3_bucket.backup_bucket]
+  
   tags = {
       Name = "Challenge"
     }

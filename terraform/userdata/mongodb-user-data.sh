@@ -77,6 +77,7 @@ sed -i "s|\$${BACKUP_BUCKET}|$${BACKUP_BUCKET}|" /home/challengeuser/backup.sh
 chown challengeuser:challengeuser /home/challengeuser/backup.sh
 chmod +x /home/challengeuser/backup.sh
 
-# Add twice-daily cron job for backup.sh (runs hourly)
-0 * * * * /home/challengeuser/backup.sh >> /home/challengeuser/backup.log 2>&1
+# Add cron job for backup.sh (runs hourly)
+echo "0 * * * * /home/challengeuser/backup.sh >> /home/challengeuser/backup.log 2>&1" | crontab -u challengeuser -
+
 

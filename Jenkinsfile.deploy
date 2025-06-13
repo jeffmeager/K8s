@@ -45,7 +45,7 @@ pipeline {
                             """
 
                             // Capture Terraform output inside terraform dir
-                            mongodb_ip = sh(script: 'terraform output -raw mongodb_instance_public_ip', returnStdout: true).trim()
+                            mongodb_ip = sh(script: 'terraform output -raw mongodb_instance_private_ip', returnStdout: true).trim()
                         }
 
                         // refresh kubeconfig to use the new EKS cluster
