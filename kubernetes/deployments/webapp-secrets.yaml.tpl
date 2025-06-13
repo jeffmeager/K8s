@@ -6,4 +6,4 @@ metadata:
 type: Opaque
 stringData:
   mongodb-uri: "mongodb://${MONGODB_USERNAME}:${MONGODB_PASSWORD}@${MONGODB_IP}:27017"
-  secret-key: "${MONGO_SECRET_KEY}"
+  secret-key: "${MONGODB_SECRET_KEY}"
