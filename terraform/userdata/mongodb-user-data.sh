@@ -30,7 +30,8 @@ passwd -l ubuntu
 # Install MongoDB 4.0 (Disabling GPG Check - UNSAFE!)
 echo "deb [trusted=yes arch=amd64] https://repo.mongodb.org/apt/ubuntu bionic/mongodb-org/4.0 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-4.0.list
 
-apt-get update
+apt-get update -y
+apt-get install -y amazon-cloudwatch-agent
 apt-get install -y mongodb-org=4.0.28 mongodb-org-server=4.0.28 mongodb-org-shell=4.0.28 mongodb-org-mongos=4.0.28 mongodb-org-tools=4.0.28 awscli
 
 # Update mongod.conf to bind to 0.0.0.0
@@ -92,3 +93,34 @@ chmod +x /home/challengeuser/backup.sh
 
 # Add cron job for backup.sh (runs hourly)
 echo "0 * * * * /home/challengeuser/backup.sh >> /home/challengeuser/backup.log 2>&1" | crontab -u challengeuser -
+
+
+# Install and configure CloudWatch Agent
+ cat <<EOF > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
+ {
+   "logs": {
+     "logs_collected": {
+       "files": {
+         "collect_list": [
+           {
+             "file_path": "/var/log/mongodb/mongod.log",
+             "log_group_name": "/mongodb/logs",
+             "log_stream_name": "{instance_id}"
+           },
+           {
+             "file_path": "/var/log/syslog",
+             "log_group_name": "/syslog",
+             "log_stream_name": "{instance_id}"
+           }
+         ]
+       }
+     }
+   }
+ }
+ EOF
+
+ /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+   -a fetch-config \
+   -m ec2 \
+   -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json \
+   -s

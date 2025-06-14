@@ -111,7 +111,24 @@ pipeline {
                                 echo "✅ AWS Provider already installed. Skipping."
                             fi
                         '''
-
+                        // Install cloudwatch exporter for EKS
+                        # ===========================
+                        sh '''
+                            set -o errexit -o pipefail -o nounset    
+                            helm repo add fluent https://fluent.github.io/helm-charts
+                            helm repo update
+                            
+                            if ! helm status fluent-bit -n kube-system > /dev/null 2>&1; then
+                                helm install fluent-bit fluent/fluent-bit \
+                                --namespace kube-system \
+                                --set cloudwatch.region=${AWS_DEFAULT_REGION} \
+                                --set cloudwatch.logGroupName=/eks/app \
+                                --set serviceAccount.create=true \
+                                --wait
+                            else
+                                echo "✅ Fluent Bit already installed. Skipping."
+                            fi
+                        '''
                         // Apply Kubernetes manifests
                         dir('kubernetes/deployments') {
                             sh '''
