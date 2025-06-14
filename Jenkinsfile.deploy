@@ -115,14 +115,21 @@ pipeline {
                         // Install cloudwatch exporter for EKS
                         sh '''
                             set -o errexit -o pipefail -o nounset    
-                            helm repo add fluent https://fluent.github.io/helm-charts
+                            helm repo add aws https://aws.github.io/eks-charts
                             helm repo update
-                            
-                            helm uninstall fluent-bit -n kube-system || true
 
-                            helm install fluent-bit fluent/fluent-bit \
+                            helm uninstall aws-for-fluent-bit -n kube-system || true
+                            
+                            helm install aws-for-fluent-bit aws/aws-for-fluent-bit \
                                 --namespace kube-system \
-                                -f kubernetes/deployments/fluentbit-values.yaml \
+                                --create-namespace \
+                                --set cloudWatch.enabled=true \
+                                --set cloudWatch.logGroupName=/eks/app \
+                                --set cloudWatch.logStreamPrefix=from-fluent-bit- \
+                                --set cloudWatch.region=us-east-1 \
+                                --set firehose.enabled=false \
+                                --set kinesis.enabled=false \
+                                --set elasticsearch.enabled=false \
                                 --wait
                         '''
 
