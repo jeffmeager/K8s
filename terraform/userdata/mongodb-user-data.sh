@@ -2,13 +2,13 @@
 
 # Static values and Terraform-injected values
 MONGODB_BINDIP="0.0.0.0"
-MONGO_USERNAME="${mongodb_username}"
-MONGO_PASSWORD="${mongodb_password}"
+MONGODB_USERNAME="${mongodb_username}"
+MONGODB_PASSWORD="${mongodb_password}"
 BACKUP_BUCKET="${backup_bucket}"
 
 echo "MONGODB_BINDIP: $MONGODB_BINDIP"
-echo "MONGO_USERNAME: $MONGO_USERNAME"
-echo "MONGO_PASSWORD: $MONGO_PASSWORD"
+echo "MONGODB_USERNAME: $MONGODB_USERNAME"
+echo "MONGODB_PASSWORD: $MONGODB_PASSWORD"
 echo "BACKUP_BUCKET: $BACKUP_BUCKET"
 
 # Install dependencies
@@ -56,7 +56,7 @@ for i in {1..30}; do
 done
 
 # Create admin user
-mongo --eval "db.getSiblingDB('admin').createUser({user: '${MONGO_USERNAME}', pwd: '${MONGO_PASSWORD}', roles:[{role:'root', db:'admin'}]})"
+mongo --eval "db.getSiblingDB('admin').createUser({user: '${MONGODB_USERNAME}', pwd: '${MONGODB_PASSWORD}', roles:[{role:'root', db:'admin'}]})"
 
 # Inject backup.sh script
 cat <<'EOD' > /home/challengeuser/backup.sh
