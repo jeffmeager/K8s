@@ -1,6 +1,8 @@
 serviceAccount:
   create: true
   name: fluent-bit-sa
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::559050241687:role/fluentbit-irsa-role
 
 cloudwatch:
   enabled: true
@@ -16,7 +18,6 @@ output:
     logGroupName: /eks/app
     logStreamPrefix: fluent-
 
-  # 🔥 Disable all other outputs explicitly
   elasticsearch:
     enabled: false
   es:
