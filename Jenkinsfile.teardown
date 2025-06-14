@@ -95,8 +95,9 @@ pipeline {
                                 fi
                             fi
                         '''
-                        // Sub-stage 3: Empty S3 bucket
+                        // Sub-stage 3: Empty S3 buckets
                             sh(script: 'aws s3 rm s3://challenge-docker-backups --recursive', returnStatus: true)
+                            sh(script: 'aws s3 rm s3://challenge-cloudtrail-logs --recursive', returnStatus: true)
 
                         // Sub-stage 4: Terraform Init
                         dir('terraform') {
