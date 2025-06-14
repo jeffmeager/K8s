@@ -30,7 +30,8 @@ pipeline {
                 ]) {
                     script {
                         // Define mongodb_ip variable at this scope so it is visible across steps
-                        def mongodb_ip = ''
+                        def mongodb_private_ip = ''
+                        def mongodb_public_ip = ''
 
                         dir('terraform') {
                             sh """
@@ -45,7 +46,8 @@ pipeline {
                             """
 
                             // Capture Terraform output inside terraform dir
-                            mongodb_ip = sh(script: 'terraform output -raw mongodb_instance_private_ip', returnStdout: true).trim()
+                            mongodb_private_ip = sh(script: 'terraform output -raw mongodb_instance_private_ip', returnStdout: true).trim()
+                            mongodb_public_ip = sh(script: 'terraform output -raw mongodb_instance_public_ip', returnStdout: true).trim()
                         }
 
                         // refresh kubeconfig to use the new EKS cluster
@@ -136,7 +138,7 @@ pipeline {
 
                                 export MONGODB_USERNAME='${mongodb_username}'
                                 export MONGODB_PASSWORD="\${ENCODED_MONGODB_PASSWORD}"
-                                export MONGODB_IP='${mongodb_ip}'
+                                export MONGODB_IP='${mongodb_private_ip}'
                                 export MONGO_SECRET_KEY='${mongodb_secret_key}'
                                 set -x  # Re-enable tracing
 
@@ -178,7 +180,7 @@ pipeline {
 
                             sh """
                                 chmod +x scripts/update-cloudflare-dns.sh
-                                ./scripts/update-cloudflare-dns.sh '${cloudflare_api_token}' '${mongodb_ip}' '${webapp_ingress_hostname}'
+                                ./scripts/update-cloudflare-dns.sh '${cloudflare_api_token}' '${mongodb_public_ip}' '${webapp_ingress_hostname}'
                             """
                         }
                     }  // END script
