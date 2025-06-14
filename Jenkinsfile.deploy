@@ -131,7 +131,7 @@ pipeline {
                         --set elasticsearch.enabled=false \
                         --set serviceAccount.create=true \
                         --set serviceAccount.name=fluent-bit-sa \
-                        --set serviceAccount.annotations."eks.amazonaws.com/role-arn"=arn:aws:iam::559050241687:role/fluentbit-irsa-role \
+                        --set "serviceAccount.annotations.eks\.amazonaws\.com/role-arn=arn:aws:iam::559050241687:role/fluentbit-irsa-role" \
                         --wait
                     '''
 
