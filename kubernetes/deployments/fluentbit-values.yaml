@@ -1,0 +1,43 @@
+serviceAccount:
+  create: true
+  name: fluent-bit-sa
+
+cloudwatch:
+  enabled: true
+  region: us-east-1
+  logGroupName: /eks/app
+  logStreamPrefix: fluent-
+  logKey: log
+  logRetentionDays: 3
+
+output:
+  cloudwatch:
+    enabled: true
+    region: us-east-1
+    logGroupName: /eks/app
+    logStreamPrefix: fluent-
+
+input:
+  tail:
+    enabled: true
+    path: /var/log/containers/*.log
+    parser: docker
+    tag: kube.*
+    refresh_interval: 5
+    rotate_wait: 30
+    mem_buf_limit: 5MB
+    skip_long_lines: On
+    db: /tail-db/tail-containers-state.db
+    db_sync: normal
+
+filter:
+  kubernetes:
+    enabled: true
+    match: kube.*
+    buffer_size: 0
+    kube_tag_prefix: kube.var.log.containers.
+    merge_log: On
+    merge_log_key: log
+    keep_log: Off
+    k8s_logging_parser: On
+    k8s_logging_exclude: Off
