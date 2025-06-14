@@ -111,7 +111,7 @@ pipeline {
                                 echo "✅ AWS Provider already installed. Skipping."
                             fi
                         '''
-                        
+
                         // Install cloudwatch exporter for EKS
                         sh '''
                             set -o errexit -o pipefail -o nounset    

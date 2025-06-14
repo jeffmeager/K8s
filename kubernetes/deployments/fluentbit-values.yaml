@@ -8,7 +8,6 @@ cloudwatch:
   logGroupName: /eks/app
   logStreamPrefix: fluent-
   logKey: log
-  logRetentionDays: 3
 
 output:
   cloudwatch:
@@ -16,6 +15,18 @@ output:
     region: us-east-1
     logGroupName: /eks/app
     logStreamPrefix: fluent-
+
+  # 🔥 Disable all other outputs explicitly
+  elasticsearch:
+    enabled: false
+  es:
+    enabled: false
+  forward:
+    enabled: false
+  http:
+    enabled: false
+  kafka:
+    enabled: false
 
 input:
   tail:
@@ -34,10 +45,6 @@ filter:
   kubernetes:
     enabled: true
     match: kube.*
-    buffer_size: 0
-    kube_tag_prefix: kube.var.log.containers.
     merge_log: On
     merge_log_key: log
     keep_log: Off
-    k8s_logging_parser: On
-    k8s_logging_exclude: Off
