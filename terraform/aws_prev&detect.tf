@@ -38,13 +38,27 @@ resource "aws_cloudtrail" "main" {
     include_management_events = true
   }
 
-  data_event_selector {
-    read_write_type = "All"
+  advanced_event_selector {
+    name = "S3DataEvents"
 
-    # include all S3 transactions to public bucket
-    data_resource {
-      type   = "AWS::S3::Object"
-      values = ["arn:aws:s3:::challenge-docker-backups/"]
+    field_selector {
+      field  = "eventCategory"
+      equals = ["Data"]
+    }
+
+    field_selector {
+      field  = "resources.type"
+      equals = ["AWS::S3::Object"]
+    }
+
+    field_selector {
+      field  = "resources.ARN"
+      equals = ["arn:aws:s3:::challenge-docker-backups/"]
+    }
+
+    field_selector {
+      field  = "readOnly"
+      equals = ["false", "true"]
     }
   }
 
