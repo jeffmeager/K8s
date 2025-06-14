@@ -216,6 +216,18 @@ resource "aws_s3_bucket" "backup_bucket" {
   }
 }
 
+data "aws_eks_cluster" "cluster" {
+  name = aws_eks_cluster.eks.name
+}
+
+data "aws_eks_cluster_auth" "cluster" {
+  name = aws_eks_cluster.eks.name
+}
+
+data "aws_iam_openid_connect_provider" "oidc" {
+  url = data.aws_eks_cluster.cluster.identity[0].oidc[0].issuer
+}
+
 resource "aws_iam_role" "fluentbit_irsa" {
   name = "fluentbit-irsa-role"
 
@@ -225,12 +237,12 @@ resource "aws_iam_role" "fluentbit_irsa" {
       {
         Effect = "Allow",
         Principal = {
-          Federated = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/${module.eks.oidc_provider}"
+          Federated = data.aws_iam_openid_connect_provider.oidc.arn
         },
         Action = "sts:AssumeRoleWithWebIdentity",
         Condition = {
           StringEquals = {
-            "${module.eks.oidc_provider}:sub" = "system:serviceaccount:kube-system:fluent-bit-sa"
+            "${replace(data.aws_eks_cluster.cluster.identity[0].oidc[0].issuer, "https://", "")}:sub" = "system:serviceaccount:kube-system:fluent-bit-sa"
           }
         }
       }
