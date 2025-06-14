@@ -69,9 +69,9 @@ resource "aws_cloudtrail" "main" {
   include_global_service_events = true
   enable_log_file_validation    = true
 
-  # Capture Management events
+  # Management Events - Read
   advanced_event_selector {
-    name = "ManagementEvents"
+    name = "ManagementEventsRead"
 
     field_selector {
       field  = "eventCategory"
@@ -80,13 +80,28 @@ resource "aws_cloudtrail" "main" {
 
     field_selector {
       field  = "readOnly"
-      equals = ["false", "true"]
+      equals = ["true"]
     }
   }
 
-  # Capture S3 Data Events
+  # Management Events - Write
   advanced_event_selector {
-    name = "S3DataEvents"
+    name = "ManagementEventsWrite"
+
+    field_selector {
+      field  = "eventCategory"
+      equals = ["Management"]
+    }
+
+    field_selector {
+      field  = "readOnly"
+      equals = ["false"]
+    }
+  }
+
+  # S3 Data Events - Read
+  advanced_event_selector {
+    name = "S3Read"
 
     field_selector {
       field  = "eventCategory"
@@ -105,7 +120,32 @@ resource "aws_cloudtrail" "main" {
 
     field_selector {
       field  = "readOnly"
-      equals = ["false", "true"]
+      equals = ["true"]
+    }
+  }
+
+  # S3 Data Events - Write
+  advanced_event_selector {
+    name = "S3Write"
+
+    field_selector {
+      field  = "eventCategory"
+      equals = ["Data"]
+    }
+
+    field_selector {
+      field  = "resources.type"
+      equals = ["AWS::S3::Object"]
+    }
+
+    field_selector {
+      field  = "resources.ARN"
+      equals = ["arn:aws:s3:::challenge-docker-backups/"]
+    }
+
+    field_selector {
+      field  = "readOnly"
+      equals = ["false"]
     }
   }
 
@@ -113,8 +153,6 @@ resource "aws_cloudtrail" "main" {
     Name = "Challenge CloudTrail"
   }
 }
-
-
 
 # ----------------------------------------
 # Allow Fluentbit to write logs
