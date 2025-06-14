@@ -6,11 +6,6 @@ MONGODB_USERNAME="${mongodb_username}"
 MONGODB_PASSWORD="${mongodb_password}"
 BACKUP_BUCKET="${backup_bucket}"
 
-echo "MONGODB_BINDIP: $MONGODB_BINDIP"
-echo "MONGODB_USERNAME: $MONGODB_USERNAME"
-echo "MONGODB_PASSWORD: $MONGODB_PASSWORD"
-echo "BACKUP_BUCKET: $BACKUP_BUCKET"
-
 # Install dependencies
 apt-get update -y
 apt-get install -y gnupg wget curl awscli mongodb-org-tools
@@ -57,6 +52,19 @@ done
 
 # Create admin user
 mongo --eval "db.getSiblingDB('admin').createUser({user: '$MONGODB_USERNAME', pwd: '$MONGODB_PASSWORD', roles:[{role:'root', db:'admin'}]})"
+
+# Stop mongod to enable authentication
+systemctl stop mongod
+
+# Enable MongoDB authentication
+echo "Enabling MongoDB authentication..."
+echo "
+security:
+  authorization: enabled
+" >> /etc/mongod.conf
+
+# Start MongoDB with authentication enabled
+systemctl start mongod
 
 # Inject backup.sh script
 cat <<'EOD' > /home/challengeuser/backup.sh
