@@ -120,9 +120,12 @@ pipeline {
                             if ! helm status fluent-bit -n kube-system > /dev/null 2>&1; then
                                 helm install fluent-bit fluent/fluent-bit \
                                 --namespace kube-system \
-                                --set cloudwatch.region=${AWS_DEFAULT_REGION} \
-                                --set cloudwatch.logGroupName=/eks/app \
                                 --set serviceAccount.create=true \
+                                --set cloudwatch.enabled=true \
+                                --set cloudwatch.region=us-east-1 \
+                                --set cloudwatch.logGroupName=/eks/app \
+                                --set cloudwatch.logStreamPrefix=fluent- \
+                                --set output.cloudwatch.enabled=true \
                                 --wait
                             else
                                 echo "✅ Fluent Bit already installed. Skipping."
