@@ -112,29 +112,28 @@ pipeline {
                             fi
                         '''
 
-                        // Install cloudwatch exporter for EKS
-                        sh '''
-                            set -o errexit -o pipefail -o nounset    
-                            helm repo add aws https://aws.github.io/eks-charts
-                            helm repo update
+                  sh '''
+                    set -o errexit -o pipefail -o nounset    
+                    helm repo add aws https://aws.github.io/eks-charts
+                    helm repo update
 
-                            helm uninstall aws-for-fluent-bit -n kube-system || true
-                            
-                            helm install aws-for-fluent-bit aws/aws-for-fluent-bit \
-                                --namespace kube-system \
-                                --create-namespace \
-                                --set cloudWatch.enabled=true \
-                                --set cloudWatch.logGroupName=/eks/app \
-                                --set cloudWatch.logStreamPrefix=from-fluent-bit- \
-                                --set cloudWatch.region=us-east-1 \
-                                --set firehose.enabled=false \
-                                --set kinesis.enabled=false \
-                                --set elasticsearch.enabled=false \
-                                --set serviceAccount.create=true \
-                                --set serviceAccount.name=fluent-bit-sa \
-                                --set serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=arn:aws:iam::559050241687:role/fluentbit-irsa-role \
-                                --wait
-                        '''
+                    helm uninstall aws-for-fluent-bit -n kube-system || true
+                    
+                    helm install aws-for-fluent-bit aws/aws-for-fluent-bit \
+                        --namespace kube-system \
+                        --create-namespace \
+                        --set cloudWatch.enabled=true \
+                        --set cloudWatch.logGroupName=/eks/app \
+                        --set cloudWatch.logStreamPrefix=from-fluent-bit- \
+                        --set cloudWatch.region=us-east-1 \
+                        --set firehose.enabled=false \
+                        --set kinesis.enabled=false \
+                        --set elasticsearch.enabled=false \
+                        --set serviceAccount.create=true \
+                        --set serviceAccount.name=fluent-bit-sa \
+                        --set serviceAccount.annotations."eks.amazonaws.com/role-arn"=arn:aws:iam::559050241687:role/fluentbit-irsa-role \
+                        --wait
+                    '''
 
                         // Apply Kubernetes manifests
                         dir('kubernetes/deployments') {
