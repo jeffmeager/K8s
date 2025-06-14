@@ -69,17 +69,28 @@ resource "aws_cloudtrail" "main" {
   include_global_service_events = true
   enable_log_file_validation    = true
 
+  # Capture Management events
   advanced_event_selector {
-    name = "AllActivity"
+    name = "ManagementEvents"
 
     field_selector {
       field  = "eventCategory"
-      equals = ["Management", "Data"]
+      equals = ["Management"]
     }
 
     field_selector {
       field  = "readOnly"
       equals = ["false", "true"]
+    }
+  }
+
+  # Capture S3 Data Events
+  advanced_event_selector {
+    name = "S3DataEvents"
+
+    field_selector {
+      field  = "eventCategory"
+      equals = ["Data"]
     }
 
     field_selector {
@@ -91,12 +102,18 @@ resource "aws_cloudtrail" "main" {
       field  = "resources.ARN"
       equals = ["arn:aws:s3:::challenge-docker-backups/"]
     }
+
+    field_selector {
+      field  = "readOnly"
+      equals = ["false", "true"]
+    }
   }
 
   tags = {
     Name = "Challenge CloudTrail"
   }
 }
+
 
 
 # ----------------------------------------
