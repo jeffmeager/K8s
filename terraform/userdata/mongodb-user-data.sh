@@ -56,7 +56,7 @@ for i in {1..30}; do
 done
 
 # Create admin user
-mongo --eval "db.getSiblingDB('admin').createUser({user: '${MONGODB_USERNAME}', pwd: '${MONGODB_PASSWORD}', roles:[{role:'root', db:'admin'}]})"
+mongo --eval "db.getSiblingDB('admin').createUser({user: '$MONGODB_USERNAME', pwd: '$MONGODB_PASSWORD', roles:[{role:'root', db:'admin'}]})"
 
 # Inject backup.sh script
 cat <<'EOD' > /home/challengeuser/backup.sh
