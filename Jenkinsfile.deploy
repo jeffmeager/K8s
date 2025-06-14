@@ -112,7 +112,6 @@ pipeline {
                             fi
                         '''
                         // Install cloudwatch exporter for EKS
-                        # ===========================
                         sh '''
                             set -o errexit -o pipefail -o nounset    
                             helm repo add fluent https://fluent.github.io/helm-charts
