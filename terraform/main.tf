@@ -224,8 +224,10 @@ data "aws_eks_cluster_auth" "cluster" {
   name = aws_eks_cluster.eks.name
 }
 
-data "aws_iam_openid_connect_provider" "oidc" {
-  url = data.aws_eks_cluster.cluster.identity[0].oidc[0].issuer
+resource "aws_iam_openid_connect_provider" "eks_oidc" {
+  client_id_list  = ["sts.amazonaws.com"]
+  thumbprint_list = ["9e99a48a9960b14926bb7f3b02e22da0afd10df6"]
+  url             = data.aws_eks_cluster.cluster.identity[0].oidc[0].issuer
 }
 
 resource "aws_iam_role" "fluentbit_irsa" {
@@ -237,7 +239,7 @@ resource "aws_iam_role" "fluentbit_irsa" {
       {
         Effect = "Allow",
         Principal = {
-          Federated = data.aws_iam_openid_connect_provider.oidc.arn
+          Federated = aws_iam_openid_connect_provider.eks_oidc.arn
         },
         Action = "sts:AssumeRoleWithWebIdentity",
         Condition = {
