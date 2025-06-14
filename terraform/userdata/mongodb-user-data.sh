@@ -76,7 +76,7 @@ aws s3 cp $BACKUP_DIR $S3_BUCKET --recursive
 EOD
 
 # Replace placeholders in backup.sh
-sed -i "s|\$${BACKUP_BUCKET}|${BACKUP_BUCKET}|" /home/challengeuser/backup.sh
+sed -i "s|\$${BACKUP_BUCKET}|${backup_bucket}|" /home/challengeuser/backup.sh
 
 # Set permissions
 chown challengeuser:challengeuser /home/challengeuser/backup.sh
