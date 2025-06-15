@@ -31,9 +31,8 @@ passwd -l ubuntu
 echo "deb [trusted=yes arch=amd64] https://repo.mongodb.org/apt/ubuntu bionic/mongodb-org/4.0 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-4.0.list
 
 apt-get update -y
-apt-get install -y amazon-cloudwatch-agent
-apt-get install -y mongodb-org=4.0.28 mongodb-org-server=4.0.28 mongodb-org-shell=4.0.28 mongodb-org-mongos=4.0.28 mongodb-org-tools=4.0.28 awscli
-
+apt-get install -y amazon-cloudwatch-agent awscli jq
+apt-get install -y mongodb-org=4.0.28 mongodb-org-server=4.0.28 mongodb-org-shell=4.0.28 mongodb-org-mongos=4.0.28 mongodb-org-tools=4.0.28
 # Update mongod.conf to bind to 0.0.0.0
 sed -i "s/^  bindIp: .*/  bindIp: 0.0.0.0/" /etc/mongod.conf
 
@@ -71,17 +70,35 @@ systemctl start mongod
 cat <<'EOD' > /home/challengeuser/backup.sh
 #!/bin/bash
 
-# Variables
-MONGO_HOST="localhost"
-MONGO_PORT="27017"
-BACKUP_DIR="/home/challengeuser/mongo_backup"
-S3_BUCKET="s3://$${BACKUP_BUCKET}"
+set -e
 
-# Perform backup
-mongodump --host $MONGO_HOST --port $MONGO_PORT --out $BACKUP_DIR
+# AWS configuration
+SECRET_NAME="webapp-secrets"
+REGION="us-east-1"
 
-# Upload to S3
-aws s3 cp $BACKUP_DIR $S3_BUCKET --recursive
+# Timestamp for backup folder
+TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
+
+# Backup path (new folder per run)
+BACKUP_DIR="/home/challengeuser/mongo_backup/${TIMESTAMP}"
+S3_BUCKET="s3://challenge-docker-backups"
+
+# Create the timestamped backup directory
+mkdir -p "$BACKUP_DIR"
+
+# Fetch MongoDB URI from Secrets Manager
+MONGODB_URI=$(aws secretsmanager get-secret-value \
+    --secret-id "$SECRET_NAME" \
+    --region "$REGION" \
+    --query 'SecretString' \
+    --output text | jq -r '."mongodb-uri"')
+
+# Run mongodump using the URI
+mongodump --uri="$MONGODB_URI" --out "$BACKUP_DIR"
+
+# Upload backup to S3
+aws s3 cp "$BACKUP_DIR" "$S3_BUCKET/${TIMESTAMP}" --recursive
+
 EOD
 
 # Replace placeholders in backup.sh
